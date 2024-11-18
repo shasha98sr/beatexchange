@@ -14,10 +14,10 @@ import { auth } from '../services/api';
 interface RegisterProps {
   open: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onRegister: (username: string, password: string) => Promise<void>;
 }
 
-const Register: React.FC<RegisterProps> = ({ open, onClose, onSuccess }) => {
+const Register: React.FC<RegisterProps> = ({ open, onClose, onRegister }) => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,7 +27,7 @@ const Register: React.FC<RegisterProps> = ({ open, onClose, onSuccess }) => {
     e.preventDefault();
     try {
       await auth.register(username, email, password);
-      onSuccess();
+      await onRegister(username, password);
       onClose();
     } catch (error: any) {
       setError(error.response?.data?.error || 'Registration failed');

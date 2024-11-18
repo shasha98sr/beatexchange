@@ -9,62 +9,28 @@ import {
   Container,
   Box,
   Button,
-  CircularProgress,
   Stack,
 } from '@mui/material';
-import BeatCard from './components/BeatCard';
+import BeatboxFeed from './components/BeatboxFeed';
 import RecordBeat from './components/RecordBeat';
 import Login from './components/Login';
 import Register from './components/Register';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import * as beatService from './services/api';
 
-interface Beat {
-  id: number;
-  title: string;
-  description: string;
-  audio_url: string;
-  author: string;
-  created_at: string;
-  likes_count: number;
-}
-
 const theme = createTheme({
   palette: {
-    mode: 'dark',
+    mode: 'light',
+    primary: {
+      main: '#f97316', // orange-500
+    },
   },
 });
 
 const AppContent = () => {
-  const [beats, setBeats] = useState<Beat[]>([]);
-  const [loading, setLoading] = useState(true);
   const [loginOpen, setLoginOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
   const { isAuthenticated, logout, login } = useAuth();
-
-  const loadBeats = async () => {
-    try {
-      const data = await beatService.beats.getAll();
-      setBeats(data);
-    } catch (error) {
-      console.error('Error loading beats:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadBeats();
-  }, []);
-
-  const handleLike = async (beatId: number) => {
-    try {
-      await beatService.beats.like(beatId);
-      loadBeats();
-    } catch (error) {
-      console.error('Error liking beat:', error);
-    }
-  };
 
   const handleRegisterSuccess = async (username: string, password: string) => {
     try {
@@ -75,22 +41,42 @@ const AppContent = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <AppBar position="static">
+    <Box className="min-h-screen bg-gray-50">
+      <AppBar position="static" sx={{ backgroundColor: 'white', boxShadow: 1 }}>
         <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+          <Typography 
+            variant="h6" 
+            component="div" 
+            sx={{ 
+              flexGrow: 1, 
+              color: theme.palette.primary.main,
+              fontWeight: 'bold'
+            }}
+          >
             BeatExchange
           </Typography>
           {isAuthenticated ? (
-            <Button color="inherit" onClick={logout}>
+            <Button 
+              color="inherit" 
+              onClick={logout}
+              sx={{ color: 'text.primary' }}
+            >
               Logout
             </Button>
           ) : (
             <Stack direction="row" spacing={2}>
-              <Button color="inherit" onClick={() => setLoginOpen(true)}>
+              <Button 
+                color="inherit" 
+                onClick={() => setLoginOpen(true)}
+                sx={{ color: 'text.primary' }}
+              >
                 Login
               </Button>
-              <Button color="inherit" onClick={() => setRegisterOpen(true)}>
+              <Button 
+                color="inherit" 
+                onClick={() => setRegisterOpen(true)}
+                sx={{ color: 'text.primary' }}
+              >
                 Register
               </Button>
             </Stack>
@@ -98,38 +84,19 @@ const AppContent = () => {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="md" sx={{ mt: 4 }}>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                {loading ? (
-                  <CircularProgress sx={{ mt: 4 }} />
-                ) : (
-                  beats.map((beat) => (
-                    <BeatCard
-                      key={beat.id}
-                      beat={beat}
-                      onLike={handleLike}
-                      isLiked={false}
-                    />
-                  ))
-                )}
-              </Box>
-            }
-          />
-        </Routes>
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <BeatboxFeed />
       </Container>
 
-      {isAuthenticated && <RecordBeat onUploadComplete={loadBeats} />}
-      <Login open={loginOpen} onClose={() => setLoginOpen(false)} />
+      <Login 
+        open={loginOpen} 
+        onClose={() => setLoginOpen(false)} 
+        onLogin={login} 
+      />
       <Register
         open={registerOpen}
         onClose={() => setRegisterOpen(false)}
-        onSuccess={() => {
-          setLoginOpen(true);
-        }}
+        onRegister={handleRegisterSuccess}
       />
     </Box>
   );
@@ -137,14 +104,14 @@ const AppContent = () => {
 
 const App = () => {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <Router>
       <AuthProvider>
-        <Router>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
           <AppContent />
-        </Router>
+        </ThemeProvider>
       </AuthProvider>
-    </ThemeProvider>
+    </Router>
   );
 };
 

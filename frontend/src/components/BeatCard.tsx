@@ -6,8 +6,11 @@ import {
   CardActions,
   IconButton,
   Box,
+  Avatar,
+  Stack,
+  Button,
 } from '@mui/material';
-import { Favorite, FavoriteBorder, Comment } from '@mui/icons-material';
+import { Favorite, FavoriteBorder, Comment, Share, MoreHoriz } from '@mui/icons-material';
 import AudioPlayer from './AudioPlayer';
 
 interface BeatCardProps {
@@ -25,41 +28,107 @@ interface BeatCardProps {
 }
 
 const BeatCard: React.FC<BeatCardProps> = ({ beat, onLike, isLiked }) => {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+  };
+
   return (
-    <Card sx={{ maxWidth: 600, width: '100%', mb: 2 }}>
-      <CardContent>
-        <Typography variant="h5" component="div">
-          {beat.title}
-        </Typography>
-        <Typography sx={{ mb: 1.5 }} color="text.secondary">
-          by {beat.author}
-        </Typography>
-        <Typography variant="body2">{beat.description}</Typography>
-        
+    <Card 
+      sx={{ 
+        width: '100%', 
+        mb: 2, 
+        boxShadow: 'none', 
+        border: '1px solid #e5e5e5',
+        borderRadius: 2,
+        '&:hover': {
+          backgroundColor: '#fcfcfc'
+        }
+      }}
+    >
+      <Box sx={{ p: 2 }}>
+        <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+          <Avatar 
+            sx={{ 
+              width: 40, 
+              height: 40, 
+              bgcolor: '#f50',
+              fontSize: '1rem'
+            }}
+          >
+            {beat.author[0].toUpperCase()}
+          </Avatar>
+          <Box sx={{ flex: 1 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Box>
+                <Typography 
+                  variant="body2" 
+                  color="text.secondary"
+                  sx={{ fontWeight: 500 }}
+                >
+                  {beat.author}
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  {beat.title}
+                </Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary">
+                {formatDate(beat.created_at)}
+              </Typography>
+            </Stack>
+          </Box>
+        </Stack>
+
         <AudioPlayer audioUrl={beat.audio_url} />
-      </CardContent>
-      
-      <CardActions disableSpacing>
-        <IconButton 
-          aria-label="like"
-          onClick={() => onLike(beat.id)}
+        
+        <Typography 
+          variant="body2" 
+          color="text.secondary" 
+          sx={{ mt: 1, mb: 2 }}
         >
-          {isLiked ? <Favorite color="error" /> : <FavoriteBorder />}
-        </IconButton>
-        <Typography variant="body2" color="text.secondary">
-          {beat.likes_count}
+          {beat.description}
         </Typography>
-        
-        <IconButton aria-label="comment">
-          <Comment />
-        </IconButton>
-        
-        <Box sx={{ ml: 'auto' }}>
-          <Typography variant="caption" color="text.secondary">
-            {new Date(beat.created_at).toLocaleDateString()}
+
+        <Stack 
+          direction="row" 
+          spacing={1} 
+          alignItems="center" 
+          sx={{ 
+            borderTop: '1px solid #e5e5e5',
+            pt: 2
+          }}
+        >
+          <IconButton 
+            onClick={() => onLike(beat.id)}
+            sx={{ 
+              color: isLiked ? '#f50' : 'inherit'
+            }}
+          >
+            {isLiked ? <Favorite /> : <FavoriteBorder />}
+          </IconButton>
+          <Typography variant="body2" color="text.secondary">
+            {beat.likes_count}
           </Typography>
-        </Box>
-      </CardActions>
+
+          <IconButton>
+            <Comment />
+          </IconButton>
+
+          <IconButton>
+            <Share />
+          </IconButton>
+
+          <Box sx={{ flex: 1 }} />
+
+          <IconButton>
+            <MoreHoriz />
+          </IconButton>
+        </Stack>
+      </Box>
     </Card>
   );
 };

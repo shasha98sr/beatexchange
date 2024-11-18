@@ -78,6 +78,16 @@ def hello_world():
 def serve_audio(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+# Route to clear database (WARNING: This will delete all data!)
+@app.route('/api/clear-db', methods=['POST'])
+def clear_database():
+    try:
+        db.drop_all()
+        db.create_all()
+        return jsonify({"message": "Database cleared successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # Import routes after app and extensions are initialized
 from routes import *
 

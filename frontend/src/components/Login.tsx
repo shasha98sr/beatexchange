@@ -9,23 +9,22 @@ import {
   Box,
   Typography,
 } from '@mui/material';
-import { useAuth } from '../context/AuthContext';
 
 interface LoginProps {
   open: boolean;
   onClose: () => void;
+  onLogin: (email: string, password: string) => Promise<void>;
 }
 
-const Login: React.FC<LoginProps> = ({ open, onClose }) => {
+const Login: React.FC<LoginProps> = ({ open, onClose, onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await login(email, password);
+      await onLogin(email, password);
       onClose();
     } catch (error) {
       setError('Invalid email or password');
