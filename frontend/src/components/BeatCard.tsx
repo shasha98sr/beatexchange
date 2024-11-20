@@ -43,10 +43,11 @@ const BeatCard: React.FC<BeatCardProps> = ({ beat, onLike, isLiked }) => {
         width: '100%', 
         mb: 2, 
         boxShadow: 'none', 
-        border: '1px solid #e5e5e5',
-        borderRadius: 2,
+        border: '1px solid #282828',
+        borderRadius: 1,
+        backgroundColor: '#121212',
         '&:hover': {
-          backgroundColor: '#fcfcfc'
+          backgroundColor: '#181818'
         }
       }}
     >
@@ -56,8 +57,9 @@ const BeatCard: React.FC<BeatCardProps> = ({ beat, onLike, isLiked }) => {
             sx={{ 
               width: 40, 
               height: 40, 
-              bgcolor: '#f50',
-              fontSize: '1rem'
+              bgcolor: '#1db954',
+              fontSize: '1rem',
+              boxShadow: 'none'
             }}
           >
             {beat.author[0].toUpperCase()}
@@ -67,16 +69,27 @@ const BeatCard: React.FC<BeatCardProps> = ({ beat, onLike, isLiked }) => {
               <Box>
                 <Typography 
                   variant="body2" 
-                  color="text.secondary"
-                  sx={{ fontWeight: 500 }}
+                  sx={{ 
+                    color: '#b3b3b3',
+                    fontWeight: 500 
+                  }}
                 >
                   {beat.author}
                 </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    color: '#ffffff',
+                    fontWeight: 700 
+                  }}
+                >
                   {beat.title}
                 </Typography>
               </Box>
-              <Typography variant="body2" color="text.secondary">
+              <Typography 
+                variant="body2" 
+                sx={{ color: '#b3b3b3' }}
+              >
                 {formatDate(beat.created_at)}
               </Typography>
             </Stack>
@@ -87,8 +100,11 @@ const BeatCard: React.FC<BeatCardProps> = ({ beat, onLike, isLiked }) => {
         
         <Typography 
           variant="body2" 
-          color="text.secondary" 
-          sx={{ mt: 1, mb: 2 }}
+          sx={{ 
+            color: '#b3b3b3',
+            mt: 1, 
+            mb: 2 
+          }}
         >
           {beat.description}
         </Typography>
@@ -98,33 +114,39 @@ const BeatCard: React.FC<BeatCardProps> = ({ beat, onLike, isLiked }) => {
           spacing={1} 
           alignItems="center" 
           sx={{ 
-            borderTop: '1px solid #e5e5e5',
+            borderTop: '1px solid #282828',
             pt: 2
           }}
         >
           <IconButton 
             onClick={() => onLike(beat.id)}
             sx={{ 
-              color: isLiked ? '#f50' : 'inherit'
+              color: isLiked ? '#1db954' : '#b3b3b3',
+              '&:hover': {
+                color: isLiked ? '#1ed760' : '#ffffff'
+              }
             }}
           >
             {isLiked ? <Favorite /> : <FavoriteBorder />}
           </IconButton>
-          <Typography variant="body2" color="text.secondary">
+          <Typography 
+            variant="body2" 
+            sx={{ color: '#b3b3b3' }}
+          >
             {beat.likes_count}
           </Typography>
 
-          <IconButton>
+          <IconButton sx={{ color: '#b3b3b3', '&:hover': { color: '#ffffff' } }}>
             <Comment />
           </IconButton>
 
-          <IconButton>
+          <IconButton sx={{ color: '#b3b3b3', '&:hover': { color: '#ffffff' } }}>
             <Share />
           </IconButton>
 
           <Box sx={{ flex: 1 }} />
 
-          <IconButton>
+          <IconButton sx={{ color: '#b3b3b3', '&:hover': { color: '#ffffff' } }}>
             <MoreHoriz />
           </IconButton>
         </Stack>

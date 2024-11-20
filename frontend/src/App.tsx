@@ -20,9 +20,46 @@ import * as beatService from './services/api';
 
 const theme = createTheme({
   palette: {
-    mode: 'light',
+    mode: 'dark',
     primary: {
-      main: '#f97316', // orange-500
+      main: '#1db954', // Spotify green
+    },
+    secondary: {
+      main: '#b3b3b3', // Gray for secondary elements
+    },
+    background: {
+      default: '#121212',
+      paper: '#181818',
+    },
+    text: {
+      primary: '#ffffff',
+      secondary: '#b3b3b3',
+    },
+    divider: '#282828',
+  },
+  components: {
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#181818',
+          borderBottom: '1px solid #282828',
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#181818',
+          borderRadius: 8,
+        },
+      },
     },
   },
 });
@@ -41,15 +78,15 @@ const AppContent = () => {
   };
 
   return (
-    <Box className="min-h-screen bg-gray-50">
-      <AppBar position="static" sx={{ backgroundColor: 'white', boxShadow: 1 }}>
+    <Box className="min-h-screen" sx={{ backgroundColor: '#121212' }}>
+      <AppBar position="static" elevation={0}>
         <Toolbar>
           <Typography 
             variant="h6" 
             component="div" 
             sx={{ 
               flexGrow: 1, 
-              color: theme.palette.primary.main,
+              color: '#1db954',
               fontWeight: 'bold'
             }}
           >
@@ -57,25 +94,37 @@ const AppContent = () => {
           </Typography>
           {isAuthenticated ? (
             <Button 
-              color="inherit" 
+              color="primary"
               onClick={logout}
-              sx={{ color: 'text.primary' }}
+              sx={{ 
+                '&:hover': {
+                  backgroundColor: 'rgba(29, 185, 84, 0.1)'
+                }
+              }}
             >
               Logout
             </Button>
           ) : (
             <Stack direction="row" spacing={2}>
               <Button 
-                color="inherit" 
+                color="primary"
                 onClick={() => setLoginOpen(true)}
-                sx={{ color: 'text.primary' }}
+                sx={{ 
+                  '&:hover': {
+                    backgroundColor: 'rgba(29, 185, 84, 0.1)'
+                  }
+                }}
               >
                 Login
               </Button>
               <Button 
-                color="inherit" 
+                color="primary"
                 onClick={() => setRegisterOpen(true)}
-                sx={{ color: 'text.primary' }}
+                sx={{ 
+                  '&:hover': {
+                    backgroundColor: 'rgba(29, 185, 84, 0.1)'
+                  }
+                }}
               >
                 Register
               </Button>
@@ -84,7 +133,7 @@ const AppContent = () => {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <Container maxWidth="lg" sx={{ mt: 4, pb: 4 }}>
         <BeatboxFeed />
       </Container>
 

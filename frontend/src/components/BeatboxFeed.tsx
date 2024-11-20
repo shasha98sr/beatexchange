@@ -66,7 +66,13 @@ const BeatboxPost: React.FC<{ post: Post; onLike: (id: string) => void }> = ({ p
   };
 
   return (
-    <Card sx={{ mb: 2, borderRadius: 2 }}>
+    <Card sx={{ 
+      mb: 2, 
+      borderRadius: 1,
+      boxShadow: 'none',
+      border: '1px solid #282828',
+      backgroundColor: '#121212'
+    }}>
       <CardContent>
         {/* Post Header */}
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
@@ -74,11 +80,11 @@ const BeatboxPost: React.FC<{ post: Post; onLike: (id: string) => void }> = ({ p
             <Avatar alt={post.author} />
             <Box>
               <Stack direction="row" spacing={1} alignItems="center">
-                <Typography variant="subtitle1" fontWeight="bold">
+                <Typography variant="subtitle1" fontWeight="bold" sx={{ color: '#ffffff' }}>
                   {post.author}
                 </Typography>
               </Stack>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" sx={{ color: '#b3b3b3' }}>
                 {new Date(post.created_at).toLocaleString()}
               </Typography>
             </Box>
@@ -90,7 +96,7 @@ const BeatboxPost: React.FC<{ post: Post; onLike: (id: string) => void }> = ({ p
 
         {/* Caption */}
         {post.description && (
-          <Typography variant="body1" sx={{ mb: 2 }}>
+          <Typography variant="body1" sx={{ mb: 2, color: '#b3b3b3' }}>
             {post.description}
           </Typography>
         )}
@@ -99,13 +105,15 @@ const BeatboxPost: React.FC<{ post: Post; onLike: (id: string) => void }> = ({ p
         <Paper 
           variant="outlined" 
           sx={{ 
-            p: 2, 
-            mb: 2, 
-            bgcolor: 'grey.50',
-            borderRadius: 2
+            p: 2,
+            mb: 2,
+            backgroundColor: '#181818',
+            boxShadow: 'none',
+            border: '1px solid #282828',
+            borderRadius: 1
           }}
         >
-          <Typography variant="h6" sx={{ mb: 2 }}>
+          <Typography variant="h6" sx={{ mb: 2, color: '#ffffff' }}>
             {post.title}
           </Typography>
           <AudioPlayer audioUrl={post.audio_url} />

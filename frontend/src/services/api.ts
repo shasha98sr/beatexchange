@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = 'http://127.0.0.1:5000/api';
+const BASE_URL = 'http://127.0.0.1:5000';
+const API_URL = `${BASE_URL}/api`;
 
 // Create two axios instances: one for JSON and one for multipart
 const api = axios.create({

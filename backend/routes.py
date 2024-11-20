@@ -1,7 +1,6 @@
-from flask import jsonify, request, current_app
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask import jsonify, request, current_app, url_for
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_cors import cross_origin
-from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from app import app, db, User, Beat, Comment, Like
 from datetime import datetime
@@ -14,39 +13,11 @@ if not os.path.exists(UPLOAD_FOLDER):
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Auth routes
-@app.route('/api/auth/register', methods=['POST'])
-@cross_origin()
-def register():
-    data = request.get_json()
-    
-    if User.query.filter_by(email=data['email']).first():
-        return jsonify({"error": "Email already registered"}), 400
-        
-    if User.query.filter_by(username=data['username']).first():
-        return jsonify({"error": "Username already taken"}), 400
-    
-    user = User(
-        username=data['username'],
-        email=data['email'],
-        password_hash=generate_password_hash(data['password'])
-    )
-    db.session.add(user)
-    db.session.commit()
-    
-    return jsonify({"message": "User registered successfully"}), 201
-
-@app.route('/api/auth/login', methods=['POST'])
-@cross_origin()
-def login():
-    data = request.get_json()
-    user = User.query.filter_by(email=data['email']).first()
-    
-    if user and check_password_hash(user.password_hash, data['password']):
-        access_token = create_access_token(identity=user.id)
-        return jsonify({"token": access_token, "user_id": user.id}), 200
-    
-    return jsonify({"error": "Invalid credentials"}), 401
+def get_full_url(path):
+    """Helper function to convert relative paths to full URLs"""
+    if path.startswith('/uploads/'):
+        return f"http://127.0.0.1:5000{path}"
+    return path
 
 # Beat routes
 @app.route('/api/beats', methods=['POST'])
@@ -65,10 +36,11 @@ def create_beat():
     audio_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     audio_file.save(audio_path)
     
+    relative_url = f"/uploads/{filename}"
     beat = Beat(
         title=request.form.get('title', 'Untitled Beat'),
         description=request.form.get('description', ''),
-        audio_url=f"/uploads/{filename}",
+        audio_url=relative_url,
         user_id=get_jwt_identity()
     )
     db.session.add(beat)
@@ -80,7 +52,7 @@ def create_beat():
             "id": beat.id,
             "title": beat.title,
             "description": beat.description,
-            "audio_url": beat.audio_url
+            "audio_url": get_full_url(beat.audio_url)
         }
     }), 201
 
@@ -92,7 +64,7 @@ def get_beats():
         'id': beat.id,
         'title': beat.title,
         'description': beat.description,
-        'audio_url': beat.audio_url,
+        'audio_url': get_full_url(beat.audio_url),
         'author': beat.author.username,
         'created_at': beat.created_at.isoformat(),
         'likes_count': len(beat.likes)
