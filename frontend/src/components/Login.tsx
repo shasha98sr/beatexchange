@@ -49,7 +49,7 @@ const Login: React.FC<LoginProps> = ({ open, onClose, onLogin }) => {
         <DialogContentText sx={{ color: '#b3b3b3', mb: 2 }}>
           Please enter your credentials to login.
         </DialogContentText>
-        <form onSubmit={handleSubmit}>
+        <form id="login-form" onSubmit={handleSubmit}>
           <TextField
             autoFocus
             margin="dense"
@@ -129,8 +129,7 @@ const Login: React.FC<LoginProps> = ({ open, onClose, onLogin }) => {
           Cancel
         </Button>
         <Button 
-          type="submit"
-          form="login-form"
+          onClick={handleSubmit}
           variant="contained"
           sx={{
             backgroundColor: '#1db954',

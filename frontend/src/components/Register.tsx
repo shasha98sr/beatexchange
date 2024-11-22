@@ -52,7 +52,7 @@ const Register: React.FC<RegisterProps> = ({ open, onClose, onRegister }) => {
         <DialogContentText sx={{ color: '#b3b3b3', mb: 2 }}>
           Create a new account to start sharing your beats.
         </DialogContentText>
-        <form onSubmit={handleSubmit}>
+        <form id="register-form" onSubmit={handleSubmit}>
           <TextField
             autoFocus
             margin="dense"
@@ -160,8 +160,7 @@ const Register: React.FC<RegisterProps> = ({ open, onClose, onRegister }) => {
           Cancel
         </Button>
         <Button 
-          type="submit"
-          form="myForm"
+          onClick={handleSubmit}
           variant="contained"
           sx={{
             backgroundColor: '#1db954',
