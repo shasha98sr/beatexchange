@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import { Box, IconButton, Typography, TextField, Button, Stack, Alert } from '@mui/material';
-import { PlayArrow, Pause, Comment } from '@mui/icons-material';
+import { Box, IconButton, Typography, TextField, Button, Stack, Alert, useTheme } from '@mui/material';
+import { PlayArrow, Pause, Comment, Send } from '@mui/icons-material';
 
 interface AudioPlayerProps {
   audioUrl: string;
@@ -19,6 +19,7 @@ interface Comment {
 }
 
 const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, username }) => {
+  const theme = useTheme();
   const waveformRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -27,8 +28,8 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
   const [error, setError] = useState<string | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
-  const [showCommentInput, setShowCommentInput] = useState(false);
   const [isDestroyed, setIsDestroyed] = useState(false);
+  const [hasPlayed, setHasPlayed] = useState(false);
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -53,7 +54,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
             cursorColor: '#1db954',
             barWidth: 3,
             barGap: 2,
-            height: 120,
+            height: 60,
             normalize: true,
             backend: 'MediaElement',
             mediaControls: false,
@@ -136,9 +137,15 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
   }, [audioUrl, comments, isDestroyed]);
 
   const handlePlayPause = () => {
-    if (wavesurfer.current) {
-      wavesurfer.current.playPause();
+    if (!wavesurfer.current) return;
+    
+    if (isPlaying) {
+      wavesurfer.current.pause();
+    } else {
+      wavesurfer.current.play();
+      setHasPlayed(true);
     }
+    setIsPlaying(!isPlaying);
   };
 
   const updateCommentMarkers = useCallback(() => {
@@ -170,7 +177,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
       marker.style.width = '7px';
       marker.style.height = '7px';
       marker.style.backgroundColor = '#1db954';
-      marker.style.opacity = '0.5';
+      marker.style.opacity = '0.6';
       marker.style.pointerEvents = 'none';
       marker.style.zIndex = '1';
 
@@ -188,7 +195,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
       commentElement.style.pointerEvents = 'none';
       commentElement.style.zIndex = '2';
       commentElement.style.marginTop = '1px';
-      commentElement.innerHTML = `<span style="color: #1db954">${comment.username} </span><span style="color: #ffffff">${comment.text}</span>`;
+      commentElement.innerHTML = `<span style="color: #1db954">${comment.username} </span><span style="color: ${theme.palette.text.primary}">${comment.text}</span>`;
       
       marker.dataset.commentId = comment.id.toString();
       commentElement.dataset.commentId = comment.id.toString();
@@ -196,7 +203,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
       commentMarkersRef.current?.appendChild(marker);
       commentMarkersRef.current?.appendChild(commentElement);
     });
-  }, [comments]);
+  }, [comments, theme]);
 
   useEffect(() => {
     if (!comments.length || !wavesurfer.current) return;
@@ -275,7 +282,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
       }]);
 
       setNewComment('');
-      setShowCommentInput(false);
     } catch (error) {
       console.error('Error adding comment:', error);
       setError('Failed to add comment');
@@ -285,28 +291,40 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
   const commentMarkersRef = useRef<HTMLDivElement>(null);
 
   return (
-    <Box sx={{ width: '100%', p: 2 }}>
+    <Box sx={{ width: '100%', padding: 2, borderRadius: 2, backgroundColor: theme.palette.background.paper }}>
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ marginBottom: 2 }}>
           {error}
         </Alert>
       )}
 
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <IconButton onClick={handlePlayPause} sx={{ mr: 1 }}>
+      <Stack direction="row" spacing={2} alignItems="center">
+        <IconButton 
+          onClick={handlePlayPause} 
+          sx={{
+            backgroundColor: theme.palette.primary.main,
+            '&:hover': {
+              backgroundColor: theme.palette.primary.dark,
+            },
+            color: 'white'
+          }}
+        >
           {isPlaying ? <Pause /> : <PlayArrow />}
         </IconButton>
-        <Box>
-          <Typography variant="body2" component="div" sx={{ color: '#b3b3b3' }}>
-            {username}
-          </Typography>
-          <Typography variant="subtitle1" component="div" sx={{ color: '#ffffff' }}>
+        <Box sx={{ flexGrow: 1 }}>
+          <Typography variant="subtitle1" sx={{ color: theme.palette.text.primary }}>
             {title}
           </Typography>
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+            {username}
+          </Typography>
         </Box>
-      </Box>
+        <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+          {formatTime(currentTime)} / {formatTime(duration)}
+        </Typography>
+      </Stack>
 
-      <Box sx={{ position: 'relative', width: '100%', mb: 4 }}>
+      <Box sx={{ position: 'relative', width: '100%', marginBottom: 4 }}>
         <Box ref={waveformRef} sx={{ width: '100%' }} />
         <Box 
           ref={commentMarkersRef}
@@ -317,53 +335,60 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
             width: '100%',
             height: '100%',
             pointerEvents: 'none',
-            zIndex: 1
+            zIndex: 10
           }}
         />
       </Box>
 
-      <Stack direction="row" spacing={2} alignItems="center">
-        <IconButton onClick={() => setShowCommentInput(!showCommentInput)}>
-          <Comment />
-        </IconButton>
-      </Stack>
-
-      {showCommentInput && (
-        <Box sx={{ mt: 2 }}>
-          <TextField
-            fullWidth
-            variant="outlined"
-            size="small"
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Add a comment..."
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                handleAddComment();
-              }
-            }}
-          />
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-            <Typography sx={{ color: '#b3b3b3', fontSize: '0.75rem' }}>
-              Commenting at {formatTime(currentTime)}
-            </Typography>
+      {hasPlayed && (
+        <Box sx={{ marginTop: 2 }}>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <TextField
+              fullWidth
+              variant="standard"
+              placeholder="Add a comment..."
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              size="small"
+              InputProps={{
+                disableUnderline: true
+              }}
+              sx={{
+                '& .MuiInputBase-root': {
+                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                  borderRadius: '9999px',
+                  padding: '0.5rem 1rem'
+                },
+                '& .MuiInputBase-input': {
+                  color: theme.palette.text.primary
+                }
+              }}
+            />
             <Button
               variant="contained"
               onClick={handleAddComment}
               disabled={!newComment.trim()}
               sx={{
-                backgroundColor: '#1db954',
+                width: '40px',
+                height: '40px',
+                minWidth: '40px',
+                padding: 0,
+                borderRadius: '50%',
+                backgroundColor: theme.palette.primary.main,
+                color: 'white',
                 '&:hover': {
-                  backgroundColor: '#1ed760',
-                },
-                '&.Mui-disabled': {
-                  backgroundColor: '#1db95466',
-                },
+                  backgroundColor: theme.palette.primary.dark
+                }
               }}
             >
-              Add Comment
+              <Send sx={{ width: 20, height: 20 }} />
             </Button>
           </Box>
+          {newComment.trim() && (
+            <Typography sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem', marginTop: 0.5 }}>
+              Commenting at {formatTime(currentTime)}
+            </Typography>
+          )}
         </Box>
       )}
     </Box>

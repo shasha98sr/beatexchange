@@ -17,10 +17,11 @@ import Login from './components/Login';
 import Register from './components/Register';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import * as beatService from './services/api';
+import Navbar from './components/Navbar';
 
 const theme = createTheme({
   palette: {
-    mode: 'dark',
+    mode: localStorage.getItem('theme') === 'light' ? 'light' : 'dark',
     primary: {
       main: '#1db954', // Spotify green
     },
@@ -28,21 +29,21 @@ const theme = createTheme({
       main: '#b3b3b3', // Gray for secondary elements
     },
     background: {
-      default: '#121212',
-      paper: '#181818',
+      default: localStorage.getItem('theme') === 'light' ? '#ffffff' : '#121212',
+      paper: localStorage.getItem('theme') === 'light' ? '#f5f5f5' : '#181818',
     },
     text: {
-      primary: '#ffffff',
+      primary: localStorage.getItem('theme') === 'light' ? '#000000' : '#ffffff',
       secondary: '#b3b3b3',
     },
-    divider: '#282828',
+    divider: localStorage.getItem('theme') === 'light' ? '#dadada' : '#282828',
   },
   components: {
     MuiAppBar: {
       styleOverrides: {
         root: {
-          backgroundColor: '#181818',
-          borderBottom: '1px solid #282828',
+          backgroundColor: localStorage.getItem('theme') === 'light' ? '#ffffff' : '#181818',
+          borderBottom: localStorage.getItem('theme') === 'light' ? '1px solid #dadada' : '1px solid #282828',
         },
       },
     },
@@ -56,7 +57,7 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          backgroundColor: '#181818',
+          backgroundColor: localStorage.getItem('theme') === 'light' ? '#f5f5f5' : '#181818',
           borderRadius: 8,
         },
       },
@@ -64,10 +65,33 @@ const theme = createTheme({
   },
 });
 
-const AppContent = () => {
+function AppContent() {
+  const { isAuthenticated, logout, login } = useAuth();
+  const [mode, setMode] = useState<'light' | 'dark'>(localStorage.getItem('theme') === 'light' ? 'light' : 'dark');
+  const [themeObj, setThemeObj] = useState(theme);
   const [loginOpen, setLoginOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
-  const { isAuthenticated, logout, login } = useAuth();
+
+  const toggleTheme = () => {
+    const newMode = mode === 'light' ? 'dark' : 'light';
+    setMode(newMode);
+    localStorage.setItem('theme', newMode);
+    setThemeObj(createTheme({
+      ...themeObj,
+      palette: {
+        ...themeObj.palette,
+        mode: newMode,
+        background: {
+          default: newMode === 'light' ? '#ffffff' : '#121212',
+          paper: newMode === 'light' ? '#f5f5f5' : '#282828',
+        },
+        text: {
+          primary: newMode === 'light' ? '#000000' : '#ffffff',
+        },
+        divider: newMode === 'light' ? '#dadada' : '#282828',
+      },
+    }));
+  };
 
   const handleRegisterSuccess = async (username: string, password: string) => {
     try {
@@ -78,89 +102,40 @@ const AppContent = () => {
   };
 
   return (
-    <Box className="min-h-screen" sx={{ backgroundColor: '#121212' }}>
-      <AppBar position="static" elevation={0}>
-        <Toolbar>
-          <Typography 
-            variant="h6" 
-            component="div" 
-            sx={{ 
-              flexGrow: 1, 
-              color: '#1db954',
-              fontWeight: 'bold'
-            }}
-          >
-            BeatExchange
-          </Typography>
-          {isAuthenticated ? (
-            <Button 
-              color="primary"
-              onClick={logout}
-              sx={{ 
-                '&:hover': {
-                  backgroundColor: 'rgba(29, 185, 84, 0.1)'
-                }
-              }}
-            >
-              Logout
-            </Button>
-          ) : (
-            <Stack direction="row" spacing={2}>
-              <Button 
-                color="primary"
-                onClick={() => setLoginOpen(true)}
-                sx={{ 
-                  '&:hover': {
-                    backgroundColor: 'rgba(29, 185, 84, 0.1)'
-                  }
-                }}
-              >
-                Login
-              </Button>
-              <Button 
-                color="primary"
-                onClick={() => setRegisterOpen(true)}
-                sx={{ 
-                  '&:hover': {
-                    backgroundColor: 'rgba(29, 185, 84, 0.1)'
-                  }
-                }}
-              >
-                Register
-              </Button>
-            </Stack>
-          )}
-        </Toolbar>
-      </AppBar>
+    <ThemeProvider theme={themeObj}>
+      <CssBaseline />
+      <Router>
+        <Navbar 
+          onToggleTheme={toggleTheme}
+          onLoginClick={() => setLoginOpen(true)}
+          onRegisterClick={() => setRegisterOpen(true)}
+        />
+        <Container maxWidth="lg">
+          <Box sx={{ mt: 4, pb: 4 }}>
+            <BeatboxFeed />
+          </Box>
+        </Container>
 
-      <Container maxWidth="lg" sx={{ mt: 4, pb: 4 }}>
-        <BeatboxFeed />
-      </Container>
-
-      <Login 
-        open={loginOpen} 
-        onClose={() => setLoginOpen(false)} 
-        onLogin={login} 
-      />
-      <Register
-        open={registerOpen}
-        onClose={() => setRegisterOpen(false)}
-        onRegister={handleRegisterSuccess}
-      />
-    </Box>
+        <Login 
+          open={loginOpen} 
+          onClose={() => setLoginOpen(false)} 
+          onLogin={login} 
+        />
+        <Register
+          open={registerOpen}
+          onClose={() => setRegisterOpen(false)}
+          onRegister={handleRegisterSuccess}
+        />
+      </Router>
+    </ThemeProvider>
   );
 };
 
 const App = () => {
   return (
-    <Router>
-      <AuthProvider>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <AppContent />
-        </ThemeProvider>
-      </AuthProvider>
-    </Router>
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 };
 
