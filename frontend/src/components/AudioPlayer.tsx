@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import { Box, IconButton, Typography, TextField, Button, Stack, Alert } from '@mui/material';
-import { PlayArrow, Pause, Comment, Delete } from '@mui/icons-material';
+import { PlayArrow, Pause, Comment } from '@mui/icons-material';
 
 interface AudioPlayerProps {
   audioUrl: string;
@@ -26,7 +26,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
   const [duration, setDuration] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [visibleComments, setVisibleComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [showCommentInput, setShowCommentInput] = useState(false);
   const [isDestroyed, setIsDestroyed] = useState(false);
@@ -52,14 +51,14 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
             waveColor: '#b3b3b3',
             progressColor: '#1db954',
             cursorColor: '#1db954',
-            barWidth: 2,
-            barGap: 1,
-            height: 48,
+            barWidth: 3,
+            barGap: 2,
+            height: 120,
             normalize: true,
             backend: 'MediaElement',
             mediaControls: false,
             hideScrollbar: true,
-            barRadius: 2,
+            barRadius: 0,
             minPxPerSec: 1,
             interact: true,
             fillParent: true
@@ -79,10 +78,30 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
           ws.on('audioprocess', () => {
             const time = ws.getCurrentTime();
             setCurrentTime(time);
-            const nearbyComments = comments.filter(
-              comment => Math.abs(comment.timestamp - time) <= 2
-            );
-            setVisibleComments(nearbyComments);
+            
+            // Find the comment closest to current time within the visibility window
+            let closestComment: Comment | null = null;
+            let minTimeDiff = 1; // Maximum time difference to show a comment
+
+            comments.forEach(comment => {
+              const timeDiff = Math.abs(comment.timestamp - time);
+              if (timeDiff <= minTimeDiff && (!closestComment || timeDiff < Math.abs(closestComment.timestamp - time))) {
+                closestComment = comment;
+              }
+            });
+
+            // Update comment visibility
+            const commentElements = commentMarkersRef.current?.querySelectorAll('.comment-bubble');
+            commentElements?.forEach(element => {
+              const htmlElement = element as HTMLDivElement;
+              const commentId = htmlElement.dataset.commentId;
+              const isVisible = closestComment && commentId === closestComment.id.toString();
+              
+              // Smooth transition
+              htmlElement.style.transition = 'opacity 0.5s ease-in-out';
+              htmlElement.style.opacity = isVisible ? '1' : '0';
+              htmlElement.style.transform = isVisible ? 'none' : 'none';
+            });
           });
           ws.on('timeupdate', () => {
             setCurrentTime(ws.getCurrentTime());
@@ -109,7 +128,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
     return () => {
       setIsDestroyed(true);
       if (wavesurfer.current) {
-        wavesurfer.current.pause();
         wavesurfer.current.unAll();
         wavesurfer.current.destroy();
         wavesurfer.current = null;
@@ -130,23 +148,53 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
     commentMarkersRef.current.innerHTML = '';
 
     const duration = wavesurfer.current.getDuration();
-    const containerWidth = waveformRef.current?.clientWidth || 0;
 
-    comments.forEach(comment => {
+    // Group comments by rounded timestamp and keep only the oldest
+    const commentsByTimestamp = comments.reduce((acc, comment) => {
+      const roundedTimestamp = Math.round(comment.timestamp * 2) / 2;
+      const existingComment = acc.get(roundedTimestamp);
+      if (!existingComment || new Date(comment.created_at) < new Date(existingComment.created_at)) {
+        acc.set(roundedTimestamp, comment);
+      }
+      return acc;
+    }, new Map());
+
+    // Create markers only for the oldest comments
+    Array.from(commentsByTimestamp.values()).forEach(comment => {
       const marker = document.createElement('div');
       const position = (comment.timestamp / duration) * 100;
       
       marker.style.position = 'absolute';
       marker.style.left = `${position}%`;
-      marker.style.top = '0';
-      marker.style.width = '2px';
-      marker.style.height = '100%';
+      marker.style.bottom = '0';
+      marker.style.width = '7px';
+      marker.style.height = '7px';
       marker.style.backgroundColor = '#1db954';
       marker.style.opacity = '0.5';
       marker.style.pointerEvents = 'none';
       marker.style.zIndex = '1';
+
+      const commentElement = document.createElement('div');
+      commentElement.className = 'comment-bubble';
+      commentElement.style.position = 'absolute';
+      commentElement.style.left = `calc(${position}% + 0px)`;
+      commentElement.style.top = '100%';
+      commentElement.style.transform = 'none';
+      commentElement.style.padding = '4px 8px';
+      commentElement.style.borderRadius = '4px';
+      commentElement.style.whiteSpace = 'nowrap';
+      commentElement.style.opacity = '0';
+      commentElement.style.transition = 'all 0.3s ease-in-out';
+      commentElement.style.pointerEvents = 'none';
+      commentElement.style.zIndex = '2';
+      commentElement.style.marginTop = '1px';
+      commentElement.innerHTML = `<span style="color: #1db954">${comment.username} </span><span style="color: #ffffff">${comment.text}</span>`;
+      
+      marker.dataset.commentId = comment.id.toString();
+      commentElement.dataset.commentId = comment.id.toString();
       
       commentMarkersRef.current?.appendChild(marker);
+      commentMarkersRef.current?.appendChild(commentElement);
     });
   }, [comments]);
 
@@ -234,32 +282,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
     }
   };
 
-  const handleDeleteComment = async (commentId: number) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setError('Please log in to delete comments');
-        return;
-      }
-
-      const response = await fetch(`http://127.0.0.1:5000/api/comments/${commentId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete comment');
-      }
-
-      setComments(prevComments => prevComments.filter(comment => comment.id !== commentId));
-    } catch (error) {
-      console.error('Error deleting comment:', error);
-      setError('Failed to delete comment');
-    }
-  };
-
   const commentMarkersRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -275,16 +297,16 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
           {isPlaying ? <Pause /> : <PlayArrow />}
         </IconButton>
         <Box>
-          <Typography variant="subtitle1" component="div" sx={{ color: '#ffffff' }}>
-            {title}
-          </Typography>
           <Typography variant="body2" component="div" sx={{ color: '#b3b3b3' }}>
             {username}
+          </Typography>
+          <Typography variant="subtitle1" component="div" sx={{ color: '#ffffff' }}>
+            {title}
           </Typography>
         </Box>
       </Box>
 
-      <Box sx={{ position: 'relative', width: '100%', mb: 2 }}>
+      <Box sx={{ position: 'relative', width: '100%', mb: 4 }}>
         <Box ref={waveformRef} sx={{ width: '100%' }} />
         <Box 
           ref={commentMarkersRef}
@@ -344,58 +366,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
           </Box>
         </Box>
       )}
-
-      <Box sx={{ mt: 2 }}>
-        {comments.map((comment) => (
-          <Box 
-            key={comment.id} 
-            sx={{ 
-              mt: 2,
-              opacity: visibleComments.some(vc => vc.id === comment.id) ? 1 : 0.3,
-              transition: 'opacity 0.3s ease-in-out',
-              backgroundColor: visibleComments.some(vc => vc.id === comment.id) 
-                ? 'rgba(29, 185, 84, 0.1)' 
-                : 'transparent',
-              padding: '8px',
-              borderRadius: '4px'
-            }}
-          >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography
-                sx={{
-                  fontSize: '0.75rem',
-                  color: '#1db954',
-                  fontWeight: 'bold',
-                }}
-              >
-                {comment.username} • {formatTime(comment.timestamp)}
-              </Typography>
-              <IconButton
-                size="small"
-                onClick={() => handleDeleteComment(comment.id)}
-                sx={{
-                  padding: '2px',
-                  color: '#ff1744',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 23, 68, 0.1)',
-                  }
-                }}
-              >
-                <Delete fontSize="small" />
-              </IconButton>
-            </Box>
-            <Typography
-              sx={{
-                fontSize: '0.75rem',
-                color: '#ffffff',
-                wordBreak: 'break-word',
-              }}
-            >
-              {comment.text}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
     </Box>
   );
 };
