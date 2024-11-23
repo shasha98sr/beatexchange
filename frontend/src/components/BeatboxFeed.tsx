@@ -1,181 +1,43 @@
-import React, { useState, useEffect } from 'react';
-import { Mic, MoreHorizontal, MessageCircle, Share2, Heart, Repeat2, Medal } from 'lucide-react';
-import AudioPlayer from './AudioPlayer';
-import { useAuth } from '../context/AuthContext';
-import { beats } from '../services/api';
-import RecordBeat from './RecordBeat';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
-  Button,
-  Card,
-  CardContent,
-  Container,
+  Paper,
   Typography,
-  Avatar,
   Stack,
   IconButton,
-  Chip,
-  Paper,
+  Avatar,
+  Button,
 } from '@mui/material';
+import {
+  Favorite,
+  FavoriteBorder,
+  Comment as CommentIcon,
+  Share as ShareIcon,
+  MoreVert as MoreVertIcon,
+  Mic as MicIcon,
+  Repeat as RepeatIcon
+} from '@mui/icons-material';
+import AudioPlayer from './AudioPlayer';
+import RecordBeat from './RecordBeat'; // Import RecordBeat component
+import BeatCard from './BeatCard';
+import { beats } from '../services/api';
 
 interface Post {
-  id: string;
+  id: number;
   title: string;
-  description: string;
   audio_url: string;
   author: string;
   created_at: string;
   likes_count: number;
+  liked_by_user: boolean;
 }
-
-const BeatboxPost: React.FC<{ post: Post; onLike: (id: string) => void }> = ({ post, onLike }) => {
-  const [isRecordingResponse, setIsRecordingResponse] = useState(false);
-  const { isAuthenticated } = useAuth();
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(post.likes_count);
-
-  const handleLike = async () => {
-    if (!isAuthenticated) {
-      // TODO: Show login prompt
-      return;
-    }
-    try {
-      await beats.like(Number(post.id));
-      setIsLiked(!isLiked);
-      setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
-      onLike(post.id);
-    } catch (error) {
-      console.error('Error liking beat:', error);
-    }
-  };
-
-  const handleComment = () => {
-    if (!isAuthenticated) {
-      // TODO: Show login prompt
-      return;
-    }
-    // TODO: Open comment dialog
-  };
-
-  const handleRemix = () => {
-    if (!isAuthenticated) {
-      // TODO: Show login prompt
-      return;
-    }
-    // TODO: Open remix dialog
-  };
-
-  return (
-    <Card sx={{ 
-      mb: 2, 
-      borderRadius: 1,
-      boxShadow: 'none',
-      border: '1px solid #282828',
-      backgroundColor: '#121212'
-    }}>
-      <CardContent>
-        {/* Post Header */}
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
-          <Stack direction="row" spacing={2}>
-            <Avatar alt={post.author} />
-            <Box>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Typography variant="subtitle1" fontWeight="bold" sx={{ color: '#ffffff' }}>
-                  {post.author}
-                </Typography>
-              </Stack>
-              <Typography variant="body2" color="text.secondary" sx={{ color: '#b3b3b3' }}>
-                {new Date(post.created_at).toLocaleString()}
-              </Typography>
-            </Box>
-          </Stack>
-          <IconButton size="small">
-            <MoreHorizontal />
-          </IconButton>
-        </Box>
-
-        {/* Caption */}
-        {post.description && (
-          <Typography variant="body1" sx={{ mb: 2, color: '#b3b3b3' }}>
-            {post.description}
-          </Typography>
-        )}
-
-        {/* Audio Player */}
-        <Paper 
-          variant="outlined" 
-          sx={{ 
-            p: 2,
-            mb: 2,
-            backgroundColor: '#181818',
-            boxShadow: 'none',
-            border: '1px solid #282828',
-            borderRadius: 1
-          }}
-        >
-          <Typography variant="h6" sx={{ mb: 2, color: '#ffffff' }}>
-            {post.title}
-          </Typography>
-          <AudioPlayer audioUrl={post.audio_url} />
-        </Paper>
-
-        {/* Action Buttons */}
-        <Stack 
-          direction="row" 
-          justifyContent="space-between"
-          alignItems="center"
-        >
-          <Stack direction="row" spacing={1}>
-            <Button
-              startIcon={<Heart />}
-              size="small"
-              color="primary"
-              sx={{ color: isLiked ? 'error.main' : 'inherit' }}
-              onClick={handleLike}
-            >
-              {likeCount}
-            </Button>
-            <Button
-              startIcon={<MessageCircle />}
-              size="small"
-              onClick={handleComment}
-            >
-              0
-            </Button>
-            <Button
-              startIcon={<Repeat2 />}
-              size="small"
-              onClick={handleRemix}
-            >
-              0
-            </Button>
-            <IconButton size="small">
-              <Share2 />
-            </IconButton>
-          </Stack>
-
-          <Button
-            startIcon={<Mic />}
-            variant={isRecordingResponse ? "contained" : "outlined"}
-            color={isRecordingResponse ? "error" : "primary"}
-            size="small"
-            onClick={() => setIsRecordingResponse(!isRecordingResponse)}
-          >
-            {isRecordingResponse ? "Recording..." : "Record Response"}
-          </Button>
-        </Stack>
-      </CardContent>
-    </Card>
-  );
-};
 
 const BeatboxFeed: React.FC = () => {
   const [activeTab, setActiveTab] = useState('forYou');
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { isAuthenticated } = useAuth();
-  const [recordDialogOpen, setRecordDialogOpen] = useState(false);
+  const [showRecordDialog, setShowRecordDialog] = useState(false); // Add state for RecordBeat dialog
 
   useEffect(() => {
     fetchPosts();
@@ -194,10 +56,10 @@ const BeatboxFeed: React.FC = () => {
     }
   };
 
-  const handleLike = async (postId: string) => {
+  const handleLike = async (postId: number) => {
     const updatedPosts = posts.map(post => {
       if (post.id === postId) {
-        return { ...post };
+        return { ...post, liked_by_user: !post.liked_by_user, likes_count: post.likes_count + (post.liked_by_user ? -1 : 1) };
       }
       return post;
     });
@@ -217,37 +79,34 @@ const BeatboxFeed: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="md">
-      {isAuthenticated && (
-        <>
-          <Box sx={{ mb: 4 }}>
-            {/* Record New Beat Button */}
-            <Button
-              fullWidth
-              variant="contained"
-              size="large"
-              startIcon={<Mic />}
-              onClick={() => setRecordDialogOpen(true)}
-              sx={{ 
-                borderRadius: 8,
-                py: 1.5,
-                bgcolor: 'primary.main',
-                '&:hover': {
-                  bgcolor: 'primary.dark',
-                }
-              }}
-            >
-              Drop a Beat
-            </Button>
-          </Box>
+    <Box maxWidth="md" sx={{ mx: 'auto', p: 2 }}>
+      {/* Record New Beat Button */}
+      <Box sx={{ mb: 4 }}>
+        <Button
+          fullWidth
+          variant="contained"
+          size="large"
+          startIcon={<MicIcon />}
+          onClick={() => setShowRecordDialog(true)} // Open RecordBeat dialog
+          sx={{ 
+            borderRadius: 8,
+            py: 1.5,
+            bgcolor: 'primary.main',
+            '&:hover': {
+              bgcolor: 'primary.dark',
+            }
+          }}
+        >
+          Drop a Beat
+        </Button>
+      </Box>
 
-          <RecordBeat 
-            open={recordDialogOpen} 
-            onClose={() => setRecordDialogOpen(false)} 
-            onUploadComplete={handleRecordComplete} 
-          />
-        </>
-      )}
+      {/* Record Beat Dialog */}
+      <RecordBeat
+        open={showRecordDialog}
+        onClose={() => setShowRecordDialog(false)}
+        onUploadComplete={handleRecordComplete}
+      />
 
       {/* Feed Tabs */}
       <Stack 
@@ -284,10 +143,10 @@ const BeatboxFeed: React.FC = () => {
 
       <Stack spacing={2}>
         {posts.map((post) => (
-          <BeatboxPost key={post.id} post={post} onLike={handleLike} />
+          <BeatCard key={post.id} beat={post} onLike={handleLike} />
         ))}
       </Stack>
-    </Container>
+    </Box>
   );
 };
 

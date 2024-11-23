@@ -27,13 +27,13 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Configure CORS
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+        "origins": ["*"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True
     },
     r"/uploads/*": {
-        "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+        "origins": ["*"],
         "methods": ["GET", "OPTIONS"],
         "allow_headers": ["Content-Type", "Range", "Accept-Ranges", "Content-Range"],
         "expose_headers": ["Content-Type", "Accept-Ranges", "Content-Range", "Content-Length"]
@@ -72,6 +72,7 @@ class Beat(db.Model):
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.Float, nullable=False)  # Timestamp in seconds
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     beat_id = db.Column(db.Integer, db.ForeignKey('beat.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

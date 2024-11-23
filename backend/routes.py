@@ -1,4 +1,4 @@
-from flask import jsonify, request, current_app, url_for
+from flask import jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_cors import cross_origin
 from werkzeug.utils import secure_filename
@@ -65,26 +65,134 @@ def get_beats():
         'title': beat.title,
         'description': beat.description,
         'audio_url': get_full_url(beat.audio_url),
-        'author': beat.author.username,
+        'author': beat.author.username if beat.author else 'Unknown User',
         'created_at': beat.created_at.isoformat(),
         'likes_count': len(beat.likes)
     } for beat in beats]), 200
 
 # Comment routes
+@app.route('/api/beats/<int:beat_id>/comments', methods=['GET'])
+@jwt_required()
+@cross_origin()
+def get_beat_comments(beat_id):
+    """Get all comments for a specific beat"""
+    try:
+        comments = Comment.query.filter_by(beat_id=beat_id).order_by(Comment.timestamp).all()
+        return jsonify([{
+            'id': comment.id,
+            'content': comment.content,
+            'timestamp': comment.timestamp,
+            'username': User.query.get(comment.user_id).username,
+            'created_at': comment.created_at.isoformat()
+        } for comment in comments]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/beats/<int:beat_id>/comments', methods=['POST'])
 @jwt_required()
 @cross_origin()
-def create_comment(beat_id):
-    data = request.get_json()
-    comment = Comment(
-        content=data['content'],
-        user_id=get_jwt_identity(),
-        beat_id=beat_id
-    )
-    db.session.add(comment)
-    db.session.commit()
-    
-    return jsonify({"message": "Comment added successfully"}), 201
+def add_beat_comment(beat_id):
+    """Add a new comment to a beat"""
+    try:
+        data = request.get_json()
+        if not data or 'content' not in data or 'timestamp' not in data:
+            return jsonify({'error': 'Missing required fields'}), 400
+
+        # Verify beat exists
+        beat = Beat.query.get(beat_id)
+        if not beat:
+            return jsonify({'error': 'Beat not found'}), 404
+
+        # Get current user
+        current_user_id = get_jwt_identity()
+
+        # Create new comment
+        new_comment = Comment(
+            content=data['content'],
+            timestamp=float(data['timestamp']),
+            user_id=current_user_id,
+            beat_id=beat_id
+        )
+
+        db.session.add(new_comment)
+        db.session.commit()
+
+        # Return the created comment
+        return jsonify({
+            'id': new_comment.id,
+            'content': new_comment.content,
+            'timestamp': new_comment.timestamp,
+            'username': User.query.get(current_user_id).username,
+            'created_at': new_comment.created_at.isoformat()
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/comments/<int:comment_id>', methods=['PUT'])
+@jwt_required()
+def update_comment(comment_id):
+    """Update an existing comment"""
+    try:
+        data = request.get_json()
+        if not data or 'content' not in data:
+            return jsonify({'error': 'Missing content field'}), 400
+
+        # Get current user
+        current_user_id = get_jwt_identity()
+
+        # Find comment
+        comment = Comment.query.get(comment_id)
+        if not comment:
+            return jsonify({'error': 'Comment not found'}), 404
+
+        # Verify ownership
+        if comment.user_id != current_user_id:
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Update comment
+        comment.content = data['content']
+        if 'timestamp' in data:
+            comment.timestamp = float(data['timestamp'])
+        
+        db.session.commit()
+
+        return jsonify({
+            'id': comment.id,
+            'content': comment.content,
+            'timestamp': comment.timestamp,
+            'username': User.query.get(comment.user_id).username,
+            'created_at': comment.created_at.isoformat()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/comments/<int:comment_id>', methods=['DELETE'])
+@jwt_required()
+def delete_comment(comment_id):
+    """Delete a comment"""
+    try:
+        # Get current user
+        current_user_id = get_jwt_identity()
+
+        # Find comment
+        comment = Comment.query.get(comment_id)
+        if not comment:
+            return jsonify({'error': 'Comment not found'}), 404
+
+        # Verify ownership
+        if comment.user_id != current_user_id:
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Delete comment
+        db.session.delete(comment)
+        db.session.commit()
+
+        return jsonify({'message': 'Comment deleted successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 # Like routes
 @app.route('/api/beats/<int:beat_id>/like', methods=['POST'])
