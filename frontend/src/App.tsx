@@ -19,31 +19,34 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import * as beatService from './services/api';
 import Navbar from './components/Navbar';
 
-const theme = createTheme({
-  palette: {
-    mode: localStorage.getItem('theme') === 'light' ? 'light' : 'dark',
-    primary: {
-      main: '#1db954', // Spotify green
-    },
+function AppContent() {
+  const { isAuthenticated, logout, login } = useAuth();
+  const [mode, setMode] = useState<'light' | 'dark'>(localStorage.getItem('theme') === 'light' ? 'light' : 'dark');
+  const [themeObj, setThemeObj] = useState(createTheme({
+    palette: {
+      mode: mode,
+      primary: {
+        main: '#1db954', // Spotify green
+      },
     secondary: {
       main: '#b3b3b3', // Gray for secondary elements
     },
     background: {
-      default: localStorage.getItem('theme') === 'light' ? '#ffffff' : '#121212',
-      paper: localStorage.getItem('theme') === 'light' ? '#f5f5f5' : '#181818',
+      default: mode === 'light' ? '#ffffff' : '#121212',
+      paper: mode === 'light' ? '#f5f5f5' : '#181818',
     },
     text: {
-      primary: localStorage.getItem('theme') === 'light' ? '#000000' : '#ffffff',
+      primary: mode === 'light' ? '#000000' : '#ffffff',
       secondary: '#b3b3b3',
     },
-    divider: localStorage.getItem('theme') === 'light' ? '#dadada' : '#282828',
+    divider: mode === 'light' ? '#dadada' : '#282828',
   },
   components: {
     MuiAppBar: {
       styleOverrides: {
         root: {
-          backgroundColor: localStorage.getItem('theme') === 'light' ? '#ffffff' : '#181818',
-          borderBottom: localStorage.getItem('theme') === 'light' ? '1px solid #dadada' : '1px solid #282828',
+          backgroundColor: mode === 'light' ? '#ffffff' : '#181818',
+          borderBottom: mode === 'light' ? '1px solid #dadada' : '1px solid #282828',
         },
       },
     },
@@ -57,18 +60,13 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          backgroundColor: localStorage.getItem('theme') === 'light' ? '#f5f5f5' : '#181818',
+          backgroundColor: mode === 'light' ? '#f5f5f5' : '#181818',
           borderRadius: 8,
         },
       },
     },
   },
-});
-
-function AppContent() {
-  const { isAuthenticated, logout, login } = useAuth();
-  const [mode, setMode] = useState<'light' | 'dark'>(localStorage.getItem('theme') === 'light' ? 'light' : 'dark');
-  const [themeObj, setThemeObj] = useState(theme);
+}));
   const [loginOpen, setLoginOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
 
@@ -87,8 +85,34 @@ function AppContent() {
         },
         text: {
           primary: newMode === 'light' ? '#000000' : '#ffffff',
+          secondary: '#b3b3b3',
         },
         divider: newMode === 'light' ? '#dadada' : '#282828',
+      },
+      components: {
+        MuiAppBar: {
+          styleOverrides: {
+            root: {
+              backgroundColor: newMode === 'light' ? '#ffffff' : '#181818',
+              borderBottom: newMode === 'light' ? '1px solid #dadada' : '1px solid #282828',
+            },
+          },
+        },
+        MuiButton: {
+          styleOverrides: {
+            root: {
+              textTransform: 'none',
+            },
+          },
+        },
+        MuiCard: {
+          styleOverrides: {
+            root: {
+              backgroundColor: newMode === 'light' ? '#f5f5f5' : '#181818',
+              borderRadius: 8,
+            },
+          },
+        },
       },
     }));
   };

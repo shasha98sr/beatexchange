@@ -10,9 +10,11 @@ import {
   LinearProgress,
   IconButton,
   Typography,
+  Alert,
 } from '@mui/material';
-import { Mic, Stop, PlayArrow, Pause, Save } from '@mui/icons-material';
+import { Mic, Stop, PlayArrow, Pause, Close, Save } from '@mui/icons-material';
 import { beats } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 interface RecordBeatProps {
   open: boolean;
@@ -21,7 +23,12 @@ interface RecordBeatProps {
 }
 
 const RecordBeat: React.FC<RecordBeatProps> = ({ open, onClose, onUploadComplete }) => {
-  const [title, setTitle] = useState('');
+  const getFormattedTimestamp = () => {
+    const now = new Date();
+    return now.getDate() + '-'+ (now.getMonth() + 1);
+  };
+
+  const [title, setTitle] = useState(`Freestyle ${getFormattedTimestamp()}`);
   const [description, setDescription] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
@@ -34,6 +41,8 @@ const RecordBeat: React.FC<RecordBeatProps> = ({ open, onClose, onUploadComplete
   const audioContext = useRef<AudioContext | null>(null);
   const audioSource = useRef<AudioBufferSourceNode | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
+
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     return () => {
@@ -59,7 +68,7 @@ const RecordBeat: React.FC<RecordBeatProps> = ({ open, onClose, onUploadComplete
   }, []);
 
   const resetState = () => {
-    setTitle('');
+    setTitle(`Freestyle ${getFormattedTimestamp()}`);
     setDescription('');
     setRecordedBlob(null);
     setRecordingTime(0);
@@ -173,6 +182,11 @@ const RecordBeat: React.FC<RecordBeatProps> = ({ open, onClose, onUploadComplete
 
   const handleSubmit = async () => {
     if (!recordedBlob) return;
+
+    if (!isAuthenticated) {
+      alert('Please log in to upload your beat!');
+      return;
+    }
 
     try {
       setUploading(true);
@@ -295,23 +309,68 @@ const RecordBeat: React.FC<RecordBeatProps> = ({ open, onClose, onUploadComplete
     >
       <DialogTitle>Record New Beat</DialogTitle>
       <DialogContent>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Drop some beats and inspire others!
+        </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, my: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
-            <IconButton
-              color={isRecording ? 'error' : 'primary'}
-              onClick={isRecording ? stopRecording : startRecording}
-              disabled={uploading}
-            >
-              {isRecording ? <Stop /> : <Mic />}
-            </IconButton>
-            {recordedBlob && (
+            {!recordedBlob ? (
               <IconButton
-                color="primary"
-                onClick={togglePlayback}
-                disabled={uploading || isRecording}
+                color={isRecording ? 'error' : 'primary'}
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={uploading}
+                sx={{ 
+                  width: 80,
+                  height: 80,
+                  '& .MuiSvgIcon-root': {
+                    fontSize: 40
+                  }
+                }}
               >
-                {isPlaying ? <Pause /> : <PlayArrow />}
+                {isRecording ? <Stop /> : <Mic />}
               </IconButton>
+            ) : (
+              <>
+                <IconButton
+                  color="primary"
+                  onClick={togglePlayback}
+                  disabled={uploading || isRecording}
+                  sx={{ 
+                    width: 80,
+                    height: 80,
+                    '& .MuiSvgIcon-root': {
+                      fontSize: 40
+                    }
+                  }}
+                >
+                  {isPlaying ? <Pause /> : <PlayArrow />}
+                </IconButton>
+                <IconButton
+                  color="error"
+                  onClick={() => {
+                    setRecordedBlob(null);
+                    setIsPlaying(false);
+                    setRecordingTime(0);
+                    if (audioSource.current) {
+                      audioSource.current.stop();
+                      audioSource.current.disconnect();
+                    }
+                    if (timerInterval.current) {
+                      clearInterval(timerInterval.current);
+                    }
+                  }}
+                  disabled={uploading}
+                  sx={{ 
+                    width: 80,
+                    height: 80,
+                    '& .MuiSvgIcon-root': {
+                      fontSize: 40
+                    }
+                  }}
+                >
+                  <Close />
+                </IconButton>
+              </>
             )}
           </Box>
 
@@ -326,7 +385,7 @@ const RecordBeat: React.FC<RecordBeatProps> = ({ open, onClose, onUploadComplete
             disabled={uploading}
             fullWidth
           />
-          <TextField
+          {/* <TextField
             label="Description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -334,7 +393,7 @@ const RecordBeat: React.FC<RecordBeatProps> = ({ open, onClose, onUploadComplete
             multiline
             rows={3}
             fullWidth
-          />
+          /> */}
         </Box>
       </DialogContent>
       <DialogActions>

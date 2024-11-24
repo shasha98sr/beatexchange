@@ -109,7 +109,7 @@ const BeatboxFeed: React.FC = () => {
       />
 
       {/* Feed Tabs */}
-      <Stack 
+      {/* <Stack 
         direction="row" 
         spacing={2} 
         sx={{ 
@@ -139,7 +139,7 @@ const BeatboxFeed: React.FC = () => {
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
           </Button>
         ))}
-      </Stack>
+      </Stack> */}
 
       <Stack spacing={2}>
         {posts.map((post) => (

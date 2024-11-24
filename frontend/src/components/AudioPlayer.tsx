@@ -52,9 +52,10 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
             waveColor: '#b3b3b3',
             progressColor: '#1db954',
             cursorColor: '#1db954',
+            cursorWidth: 1,
             barWidth: 3,
             barGap: 2,
-            height: 60,
+            height: 80,
             normalize: true,
             backend: 'MediaElement',
             mediaControls: false,
@@ -184,10 +185,16 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
       const commentElement = document.createElement('div');
       commentElement.className = 'comment-bubble';
       commentElement.style.position = 'absolute';
-      commentElement.style.left = `calc(${position}% + 0px)`;
+      if (position > 50) {
+        commentElement.style.right = `${100 - position}%`;
+        commentElement.style.left = 'auto';
+      } else {
+        commentElement.style.left = `calc(${position}%)`;
+        commentElement.style.right = 'auto';
+      }
       commentElement.style.top = '100%';
       commentElement.style.transform = 'none';
-      commentElement.style.padding = '4px 8px';
+      commentElement.style.padding = '0 0 4px 0';
       commentElement.style.borderRadius = '4px';
       commentElement.style.whiteSpace = 'nowrap';
       commentElement.style.opacity = '0';
@@ -195,13 +202,20 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
       commentElement.style.pointerEvents = 'none';
       commentElement.style.zIndex = '2';
       commentElement.style.marginTop = '1px';
-      commentElement.innerHTML = `<span style="color: #1db954">${comment.username} </span><span style="color: ${theme.palette.text.primary}">${comment.text}</span>`;
+      commentElement.innerHTML = position > 50 
+        ? `<span style="color: ${theme.palette.text.primary}">${comment.text}</span> <span style="color: #1db954">${comment.username}</span>`
+        : `<span style="color: #1db954">${comment.username} </span><span style="color: ${theme.palette.text.primary}">${comment.text}</span>`;
       
       marker.dataset.commentId = comment.id.toString();
       commentElement.dataset.commentId = comment.id.toString();
       
-      commentMarkersRef.current?.appendChild(marker);
-      commentMarkersRef.current?.appendChild(commentElement);
+      if (position > 50) {
+        commentMarkersRef.current?.appendChild(commentElement);
+        commentMarkersRef.current?.appendChild(marker);
+      } else {
+        commentMarkersRef.current?.appendChild(marker);
+        commentMarkersRef.current?.appendChild(commentElement);
+      }
     });
   }, [comments, theme]);
 
@@ -312,10 +326,10 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
           {isPlaying ? <Pause /> : <PlayArrow />}
         </IconButton>
         <Box sx={{ flexGrow: 1 }}>
-          <Typography variant="subtitle1" sx={{ color: theme.palette.text.primary }}>
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
             {title}
           </Typography>
-          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+          <Typography variant="h6" sx={{ color: theme.palette.text.primary, mt: -0.5 }}>
             {username}
           </Typography>
         </Box>
