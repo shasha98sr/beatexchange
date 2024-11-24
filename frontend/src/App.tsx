@@ -29,7 +29,11 @@ function AppContent() {
           dark: mode === 'light' ? '#1B5E20' : '#2E7D32',
         },
         secondary: {
-          main: mode === 'light' ? '#1B5E20' : '#1B5E20',
+          main: mode === 'light' ? '#45a049' : '#45a049',
+          light: mode === 'light' ? '#b3b3b3' : '#b3b3b3',
+          dark: mode === 'light' ? '#1B5E20' : '#1B5E20',
+          
+
         },
         background: {
           default: mode === 'light' ? '#ffffff' : '#000000',

@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import { Box, IconButton, Typography, TextField, Button, Stack, Alert, useTheme } from '@mui/material';
 import { PlayArrow, Pause, Comment, Send } from '@mui/icons-material';
+import { useAuth } from '../context/AuthContext';
+import { beats } from '../services/api';
 
 interface AudioPlayerProps {
   audioUrl: string;
@@ -19,6 +21,7 @@ interface Comment {
 }
 
 const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, username }) => {
+  const { token } = useAuth();
   const theme = useTheme();
   const waveformRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
@@ -38,26 +41,31 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
   };
 
   useEffect(() => {
-    if (!audioUrl) return;
+    if (!audioUrl || !token) {
+      setError('Authentication required to play audio');
+      return;
+    }
 
     const initializeAudio = async () => {
       try {
         setError(null);
         setIsDestroyed(false);
-        console.log('Loading audio from URL:', audioUrl);
+        
+        // Append token to URL
+        const authenticatedUrl = `${audioUrl}${audioUrl.includes('?') ? '&' : '?'}token=${token}`;
+        console.log('Loading audio from URL:', authenticatedUrl);
 
         if (waveformRef.current && !wavesurfer.current) {
           const ws = WaveSurfer.create({
             container: waveformRef.current,
-            waveColor: '#b3b3b3',
-            progressColor: '#1db954',
-            cursorColor: '#1db954',
+            waveColor: theme.palette.secondary.light,
+            progressColor: theme.palette.primary.main,
+            cursorColor: theme.palette.secondary.main,
             cursorWidth: 1,
             barWidth: 3,
             barGap: 2,
             height: 80,
             normalize: true,
-            backend: 'MediaElement',
             mediaControls: false,
             hideScrollbar: true,
             barRadius: 0,
@@ -115,13 +123,18 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
             }
           });
 
-          await ws.load(audioUrl);
+          try {
+            await ws.load(authenticatedUrl);
+          } catch (error) {
+            console.error('Error loading audio:', error);
+            if (!isDestroyed) {
+              setError('Error loading audio. Please try again later.');
+            }
+          }
         }
       } catch (err) {
         console.error('Error initializing audio:', err);
-        if (!isDestroyed) {
-          setError('Error loading audio. Please try again later.');
-        }
+        setError('Error loading audio');
       }
     };
 
@@ -135,7 +148,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
         wavesurfer.current = null;
       }
     };
-  }, [audioUrl, comments, isDestroyed]);
+  }, [audioUrl, comments, isDestroyed, token]);
 
   const handlePlayPause = () => {
     if (!wavesurfer.current) return;
@@ -226,23 +239,12 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
 
   const fetchComments = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
       if (!token) {
         console.error('No auth token found');
         return;
       }
 
-      const response = await fetch(`http://127.0.0.1:5000/api/beats/${beatId}/comments`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch comments');
-      }
-
-      const data = await response.json();
+      const data = await beats.getComments(beatId);
       setComments(data.map((comment: any) => ({
         id: comment.id,
         text: comment.content,
@@ -254,7 +256,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
       console.error('Error fetching comments:', error);
       setError('Failed to load comments');
     }
-  }, [beatId]);
+  }, [beatId, token]);
 
   useEffect(() => {
     fetchComments();
@@ -264,29 +266,12 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
     if (!newComment.trim()) return;
 
     try {
-      const token = localStorage.getItem('token');
       if (!token) {
         setError('Please log in to comment');
         return;
       }
 
-      const response = await fetch(`http://127.0.0.1:5000/api/beats/${beatId}/comments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          content: newComment,
-          timestamp: currentTime
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to add comment');
-      }
-
-      const newCommentData = await response.json();
+      const newCommentData = await beats.addComment(beatId, newComment, currentTime);
       setComments(prevComments => [...prevComments, {
         id: newCommentData.id,
         text: newCommentData.content,
@@ -294,7 +279,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
         username: newCommentData.username,
         created_at: newCommentData.created_at
       }]);
-
       setNewComment('');
     } catch (error) {
       console.error('Error adding comment:', error);

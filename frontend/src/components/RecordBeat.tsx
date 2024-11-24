@@ -24,12 +24,22 @@ interface RecordBeatProps {
 }
 
 const RecordBeat: React.FC<RecordBeatProps> = ({ open, onClose, onUploadComplete }) => {
-  const getFormattedTimestamp = () => {
+  const generateCreativeBeatName = () => {
+    const adjectives = [
+      'Fresh', 'Smooth', 'Epic', 'Groovy', 'Fire', 'Chill', 'Raw', 
+      'Funky', 'Dope', 'Sick', 'Vibing', 'Flow', 'Rhythm', 'Cosmic',
+      'Electric', 'Savage', 'Wild', 'Mystic', 'Golden', 'Urban', 'Freestyle',
+    ];
+    const styles = [
+      'Beat', 'Flow', 'Groove', 'Wave', 'Vibe', 'Rhythm', 'Sound'
+    ];
     const now = new Date();
-    return now.getDate() + '-'+ (now.getMonth() + 1);
+    const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const randomStyle = styles[Math.floor(Math.random() * styles.length)];
+    return `${randomAdjective} ${randomStyle} ${now.getDate()}-${now.getMonth() + 1}`;
   };
 
-  const [title, setTitle] = useState(`Freestyle ${getFormattedTimestamp()}`);
+  const [title, setTitle] = useState(`${generateCreativeBeatName()}`);
   const [description, setDescription] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
@@ -70,7 +80,7 @@ const RecordBeat: React.FC<RecordBeatProps> = ({ open, onClose, onUploadComplete
   }, []);
 
   const resetState = () => {
-    setTitle(`Freestyle ${getFormattedTimestamp()}`);
+    setTitle(`${generateCreativeBeatName()}`);
     setDescription('');
     setRecordedBlob(null);
     setRecordingTime(0);

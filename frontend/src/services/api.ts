@@ -58,6 +58,14 @@ export const beats = {
     const response = await api.post(`/beats/${beatId}/comments`, { content });
     return response.data;
   },
+  getComments: async (beatId: number) => {
+    const response = await api.get(`/beats/${beatId}/comments`);
+    return response.data;
+  },
+  addComment: async (beatId: number, content: string, timestamp: number) => {
+    const response = await api.post(`/beats/${beatId}/comments`, { content, timestamp });
+    return response.data;
+  }
 };
 
 export default api;

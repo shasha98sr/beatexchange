@@ -138,7 +138,7 @@ const BeatboxFeed: React.FC = () => {
           }}
         >
           <span className="green-text">Your beats,</span>
-          <span className="white-text">your space,</span>
+          <span className="white-text">your stage,</span>
           <span className="white-text">no limits.</span>
         </Typography>
         <Typography 
