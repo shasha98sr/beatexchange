@@ -7,6 +7,7 @@ import {
   IconButton,
   Avatar,
   Button,
+  useTheme
 } from '@mui/material';
 import {
   Favorite,
@@ -33,6 +34,7 @@ interface Post {
 }
 
 const BeatboxFeed: React.FC = () => {
+  const theme = useTheme();
   const [activeTab, setActiveTab] = useState('forYou');
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,21 +81,98 @@ const BeatboxFeed: React.FC = () => {
   }
 
   return (
-    <Box maxWidth="md" sx={{ mx: 'auto', p: 2 }}>
-      {/* Record New Beat Button */}
-      <Box sx={{ mb: 4 }}>
+    <Box maxWidth="md" sx={{ 
+        mx: 'auto', 
+        p: 2,
+        minHeight: '60vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        mb: 4,
+        color: theme.palette.text.primary,
+        transition: 'color 0.3s ease'
+      }}>
+      {/* Hero Section */}
+      <Box sx={{ 
+        p: 4, 
+        maxWidth: 800,
+        color: theme.palette.text.primary
+      }}>
+        <Typography 
+          variant="h1" 
+          component="h1" 
+          sx={{ 
+            fontSize: { xs: '3.5rem', md: '5rem' },
+            fontWeight: 700,
+            lineHeight: 1,
+            mb: 1,
+            '& .green-text': {
+              display: 'block',
+              background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 20%, #2E7D32 40%, #1B5E20 60%, #45a049 80%, #4CAF50 100%)',
+              backgroundSize: '200% auto',
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              color: 'transparent',
+              animation: 'gradient 3s ease infinite',
+              mb: 0.5
+            },
+            '& .white-text': {
+              display: 'block',
+              color: theme.palette.text.primary,
+              fontSize: { xs: '3.5rem', md: '5rem' },
+              mb: 0.5
+            },
+            '@keyframes gradient': {
+              '0%': {
+                backgroundPosition: '0% 50%'
+              },
+              '50%': {
+                backgroundPosition: '100% 50%'
+              },
+              '100%': {
+                backgroundPosition: '0% 50%'
+              }
+            }
+          }}
+        >
+          <span className="green-text">Your beats,</span>
+          <span className="white-text">your space,</span>
+          <span className="white-text">no limits.</span>
+        </Typography>
+        <Typography 
+          sx={{ 
+            fontSize: '1.25rem',
+            my: 4,
+            opacity: 0.9,
+            maxWidth: 600,
+            mx: 'auto',
+            color: theme.palette.text.secondary
+          }}
+        >
+          Spit.box is like Twitter, but for beatboxers. Drop your routines, share your sound, and skip the noise.
+        </Typography>
+
+        {/* Record New Beat Button */}
         <Button
           fullWidth
           variant="contained"
           size="large"
           startIcon={<MicIcon />}
-          onClick={() => setShowRecordDialog(true)} // Open RecordBeat dialog
+          onClick={() => setShowRecordDialog(true)}
           sx={{ 
-            borderRadius: 8,
-            py: 1.5,
-            bgcolor: 'primary.main',
+            mt: 4,
+            borderRadius: 2,
+            py: 2,
+            px: 3,
+            bgcolor: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(10px)',
+            color: theme.palette.text.primary,
+            textTransform: 'none',
+            fontSize: '1.1rem',
             '&:hover': {
-              bgcolor: 'primary.dark',
+              bgcolor: 'rgba(255, 255, 255, 0.15)',
             }
           }}
         >
@@ -101,47 +180,15 @@ const BeatboxFeed: React.FC = () => {
         </Button>
       </Box>
 
-      {/* Record Beat Dialog */}
+      {/* RecordBeat Dialog */}
       <RecordBeat
         open={showRecordDialog}
         onClose={() => setShowRecordDialog(false)}
         onUploadComplete={handleRecordComplete}
       />
 
-      {/* Feed Tabs */}
-      {/* <Stack 
-        direction="row" 
-        spacing={2} 
-        sx={{ 
-          mb: 4,
-          borderBottom: 1,
-          borderColor: 'divider'
-        }}
-      >
-        {['forYou', 'battles', 'following'].map((tab) => (
-          <Button
-            key={tab}
-            color="inherit"
-            sx={{
-              px: 2,
-              py: 1,
-              minWidth: 100,
-              color: activeTab === tab ? 'primary.main' : 'text.secondary',
-              borderBottom: 2,
-              borderColor: activeTab === tab ? 'primary.main' : 'transparent',
-              '&:hover': {
-                bgcolor: 'transparent',
-                color: 'text.primary'
-              }
-            }}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </Button>
-        ))}
-      </Stack> */}
-
-      <Stack spacing={2}>
+      {/* Feed Content */}
+      <Stack spacing={2} sx={{ width: '100%', mt: 6, color: theme.palette.text.primary }}>
         {posts.map((post) => (
           <BeatCard key={post.id} beat={post} onLike={handleLike} />
         ))}

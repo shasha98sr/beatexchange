@@ -1,101 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import {
-  AppBar,
-  Toolbar,
-  Typography,
   Container,
   Box,
-  Button,
-  Stack,
 } from '@mui/material';
 import BeatboxFeed from './components/BeatboxFeed';
 import RecordBeat from './components/RecordBeat';
-import Login from './components/Login';
-import Register from './components/Register';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import * as beatService from './services/api';
 import Navbar from './components/Navbar';
 import './App.css';
 
 function AppContent() {
-  const { isAuthenticated, logout, login } = useAuth();
-  const [mode, setMode] = useState<'light' | 'dark'>(localStorage.getItem('theme') === 'light' ? 'light' : 'dark');
-  const [themeObj, setThemeObj] = useState(createTheme({
-    palette: {
-      mode: mode,
-      primary: {
-        main: '#1db954', // Spotify green
-      },
-    secondary: {
-      main: '#b3b3b3', // Gray for secondary elements
-    },
-    background: {
-      default: mode === 'light' ? '#ffffff' : '#121212',
-      paper: mode === 'light' ? '#f5f5f5' : '#181818',
-    },
-    text: {
-      primary: mode === 'light' ? '#000000' : '#ffffff',
-      secondary: '#b3b3b3',
-    },
-    divider: mode === 'light' ? '#dadada' : '#282828',
-  },
-  components: {
-    MuiAppBar: {
-      styleOverrides: {
-        root: {
-          backgroundColor: mode === 'light' ? '#ffffff' : '#181818',
-          borderBottom: mode === 'light' ? '1px solid #dadada' : '1px solid #282828',
-        },
-      },
-    },
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          textTransform: 'none',
-        },
-      },
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          backgroundColor: mode === 'light' ? '#f5f5f5' : '#181818',
-          borderRadius: 8,
-        },
-      },
-    },
-  },
-}));
-  const [loginOpen, setLoginOpen] = useState(false);
-  const [registerOpen, setRegisterOpen] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const [mode, setMode] = useState<'light' | 'dark'>(
+    localStorage.getItem('theme') === 'light' ? 'light' : 'dark'
+  );
 
-  const toggleTheme = () => {
-    const newMode = mode === 'light' ? 'dark' : 'light';
-    setMode(newMode);
-    localStorage.setItem('theme', newMode);
-    setThemeObj(createTheme({
-      ...themeObj,
+  const createAppTheme = useCallback((mode: 'light' | 'dark') => {
+    return createTheme({
       palette: {
-        ...themeObj.palette,
-        mode: newMode,
+        mode,
+        primary: {
+          main: mode === 'light' ? '#2E7D32' : '#4CAF50',
+          light: mode === 'light' ? '#4CAF50' : '#45a049',
+          dark: mode === 'light' ? '#1B5E20' : '#2E7D32',
+        },
+        secondary: {
+          main: mode === 'light' ? '#1B5E20' : '#1B5E20',
+        },
         background: {
-          default: newMode === 'light' ? '#ffffff' : '#121212',
-          paper: newMode === 'light' ? '#f5f5f5' : '#282828',
+          default: mode === 'light' ? '#ffffff' : '#000000',
+          paper: mode === 'light' ? '#f5f5f5' : '#121212',
         },
         text: {
-          primary: newMode === 'light' ? '#000000' : '#ffffff',
-          secondary: '#b3b3b3',
+          primary: mode === 'light' ? '#000000' : '#ffffff',
+          secondary: mode === 'light' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.7)',
         },
-        divider: newMode === 'light' ? '#dadada' : '#282828',
+        divider: mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.12)',
+      },
+      typography: {
+        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       },
       components: {
         MuiAppBar: {
           styleOverrides: {
             root: {
-              backgroundColor: newMode === 'light' ? '#ffffff' : '#181818',
-              borderBottom: newMode === 'light' ? '1px solid #dadada' : '1px solid #282828',
+              background: mode === 'light'
+                ? '#ffffff'
+                : '#000000',
+              borderBottom: `1px solid ${mode === 'light' 
+                ? 'rgba(0, 0, 0, 0.12)' 
+                : 'rgba(255, 255, 255, 0.12)'}`,
             },
           },
         },
@@ -103,54 +61,66 @@ function AppContent() {
           styleOverrides: {
             root: {
               textTransform: 'none',
+              borderRadius: 8,
+            },
+            contained: {
+              backgroundColor: mode === 'light' 
+                ? 'rgba(0, 0, 0, 0.05)'
+                : 'rgba(255, 255, 255, 0.1)',
+              color: mode === 'light' ? '#000000' : '#ffffff',
+              '&:hover': {
+                backgroundColor: mode === 'light'
+                  ? 'rgba(0, 0, 0, 0.1)'
+                  : 'rgba(255, 255, 255, 0.15)',
+              },
             },
           },
         },
         MuiCard: {
           styleOverrides: {
             root: {
-              backgroundColor: newMode === 'light' ? '#f5f5f5' : '#181818',
+              backgroundColor: mode === 'light'
+                ? 'rgba(0, 0, 0, 0.02)'
+                : 'rgba(255, 255, 255, 0.05)',
               borderRadius: 8,
+              backdropFilter: 'blur(10px)',
+            },
+          },
+        },
+        MuiDialog: {
+          styleOverrides: {
+            paper: {
+              background: mode === 'light'
+                ? '#ffffff'
+                : '#000000',
+              borderRadius: 16,
             },
           },
         },
       },
-    }));
-  };
+    });
+  }, []);
 
-  const handleRegisterSuccess = async (username: string, password: string) => {
-    try {
-      await login(username, password);
-    } catch (error) {
-      console.error('Error logging in after registration:', error);
-    }
-  };
+  const [themeObj, setThemeObj] = useState(createAppTheme(mode));
+
+  const toggleTheme = useCallback(() => {
+    const newMode = mode === 'light' ? 'dark' : 'light';
+    setMode(newMode);
+    setThemeObj(createAppTheme(newMode));
+    localStorage.setItem('theme', newMode);
+    document.documentElement.setAttribute('data-theme', newMode);
+  }, [mode, createAppTheme]);
 
   return (
     <ThemeProvider theme={themeObj}>
       <CssBaseline />
       <Router>
-        <Navbar 
-          onToggleTheme={toggleTheme}
-          onLoginClick={() => setLoginOpen(true)}
-          onRegisterClick={() => setRegisterOpen(true)}
-        />
+        <Navbar onToggleTheme={toggleTheme} />
         <Container maxWidth="lg">
           <Box sx={{ mt: 4, pb: 4 }}>
             <BeatboxFeed />
           </Box>
         </Container>
-
-        <Login 
-          open={loginOpen} 
-          onClose={() => setLoginOpen(false)} 
-          onLogin={login} 
-        />
-        <Register
-          open={registerOpen}
-          onClose={() => setRegisterOpen(false)}
-          onRegister={handleRegisterSuccess}
-        />
       </Router>
     </ThemeProvider>
   );

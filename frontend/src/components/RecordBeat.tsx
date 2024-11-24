@@ -15,6 +15,7 @@ import {
 import { Mic, Stop, PlayArrow, Pause, Close, Save } from '@mui/icons-material';
 import { beats } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '@mui/material/styles';
 
 interface RecordBeatProps {
   open: boolean;
@@ -43,6 +44,7 @@ const RecordBeat: React.FC<RecordBeatProps> = ({ open, onClose, onUploadComplete
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
 
   const { isAuthenticated } = useAuth();
+  const theme = useTheme();
 
   useEffect(() => {
     return () => {
@@ -301,18 +303,45 @@ const RecordBeat: React.FC<RecordBeatProps> = ({ open, onClose, onUploadComplete
   };
 
   return (
-    <Dialog 
-      open={open} 
+    <Dialog
+      open={open}
       onClose={handleClose}
       maxWidth="sm"
       fullWidth
+      PaperProps={{
+        sx: {
+          bgcolor: theme.palette.mode === 'dark' ? '#121212' : '#ffffff',
+          backgroundImage: 'none',
+          color: theme.palette.text.primary,
+          transition: 'background-color 0.3s ease, color 0.3s ease'
+        }
+      }}
     >
-      <DialogTitle>Record New Beat</DialogTitle>
+      <DialogTitle>
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Typography variant="h6">Record Your Beat</Typography>
+          <IconButton onClick={handleClose} size="small">
+            <Close />
+          </IconButton>
+        </Box>
+      </DialogTitle>
       <DialogContent>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography variant="body2" sx={{ 
+          mb: 2,
+          color: theme.palette.text.secondary
+        }}>
           Drop some beats and inspire others!
         </Typography>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, my: 2 }}>
+        
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: 2, 
+          my: 2,
+          '& .MuiTextField-root': {
+            bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+          }
+        }}>
           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
             {!recordedBlob ? (
               <IconButton
@@ -384,6 +413,7 @@ const RecordBeat: React.FC<RecordBeatProps> = ({ open, onClose, onUploadComplete
             onChange={(e) => setTitle(e.target.value)}
             disabled={uploading}
             fullWidth
+            variant="outlined"
           />
           {/* <TextField
             label="Description"
