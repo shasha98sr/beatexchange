@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -18,6 +18,7 @@ import Register from './components/Register';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import * as beatService from './services/api';
 import Navbar from './components/Navbar';
+import './App.css';
 
 function AppContent() {
   const { isAuthenticated, logout, login } = useAuth();
