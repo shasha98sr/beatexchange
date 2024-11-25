@@ -7,7 +7,8 @@ import {
   IconButton,
   Avatar,
   Button,
-  useTheme
+  useTheme,
+  Link
 } from '@mui/material';
 import {
   Favorite,
@@ -16,12 +17,16 @@ import {
   Share as ShareIcon,
   MoreVert as MoreVertIcon,
   Mic as MicIcon,
-  Repeat as RepeatIcon
+  Repeat as RepeatIcon,
+  Google as GoogleIcon,
+  GitHub as GitHubIcon
 } from '@mui/icons-material';
 import AudioPlayer from './AudioPlayer';
 import RecordBeat from './RecordBeat'; // Import RecordBeat component
 import BeatCard from './BeatCard';
 import { beats } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { GoogleLogin } from '@react-oauth/google';
 
 interface Post {
   id: number;
@@ -35,6 +40,7 @@ interface Post {
 
 const BeatboxFeed: React.FC = () => {
   const theme = useTheme();
+  const { isAuthenticated , googleLogin } = useAuth();
   const [activeTab, setActiveTab] = useState('forYou');
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +62,18 @@ const BeatboxFeed: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    try {
+      await googleLogin(credentialResponse);
+    } catch (error) {
+      setError('Google sign-in failed');
+    }
+  };
+  
+  const handleGoogleError = () => {
+    setError('Google sign-in failed');
   };
 
   const handleLike = async (postId: number) => {
@@ -155,29 +173,69 @@ const BeatboxFeed: React.FC = () => {
         </Typography>
 
         {/* Record New Beat Button */}
-        <Button
-          fullWidth
-          variant="contained"
-          size="large"
-          startIcon={<MicIcon />}
-          onClick={() => setShowRecordDialog(true)}
-          sx={{ 
-            mt: 4,
-            borderRadius: 2,
-            py: 2,
-            px: 3,
-            bgcolor: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)',
-            color: theme.palette.text.primary,
-            textTransform: 'none',
-            fontSize: '1.1rem',
-            '&:hover': {
-              bgcolor: 'rgba(255, 255, 255, 0.15)',
-            }
-          }}
-        >
-          Drop a Beat
-        </Button>
+        {isAuthenticated ? (
+          <Button
+            fullWidth
+            variant="contained"
+            size="large"
+            startIcon={<MicIcon />}
+            onClick={() => setShowRecordDialog(true)}
+            sx={{ 
+              mt: 4,
+              borderRadius: 2,
+              py: 2,
+              px: 3,
+              bgcolor: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(10px)',
+              color: theme.palette.text.primary,
+              textTransform: 'none',
+              fontSize: '1.1rem',
+              '&:hover': {
+                bgcolor: 'rgba(255, 255, 255, 0.15)',
+              }
+            }}
+          >
+            Drop a Beat
+          </Button>
+        ) : (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, gap: 2, alignItems: 'center' }}>
+            <GoogleLogin
+              size='large'
+              text='signup_with'
+              width='800px'
+              theme={theme.palette.mode === 'dark' ? 'outline' : 'filled_black'}
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              useOneTap
+            />
+            <Link 
+              href="https://github.com/shasha98sr/beatexchange" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              sx={{ textDecoration: 'none' }}
+            >
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<GitHubIcon />}
+                sx={{ 
+                  height: '46px',
+                  borderRadius: 2,
+                  bgcolor: 'rgba(255, 255, 255, 0.1)',
+                  backdropFilter: 'blur(10px)',
+                  color: theme.palette.text.primary,
+                  textTransform: 'none',
+                  fontSize: '1rem',
+                  '&:hover': {
+                    bgcolor: 'rgba(255, 255, 255, 0.15)',
+                  }
+                }}
+              >
+                Star on GitHub
+              </Button>
+            </Link>
+          </Box>
+        )}
       </Box>
 
       {/* RecordBeat Dialog */}

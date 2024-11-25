@@ -42,7 +42,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
 
   useEffect(() => {
     if (!audioUrl || !token) {
-      setError('Authentication required to play audio');
+      setError('Please sign in to play audio');
       return;
     }
 

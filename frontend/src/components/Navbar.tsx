@@ -16,6 +16,11 @@ import { FaSun, FaMoon } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import Login from './Login';
 import Register from './Register';
+import { GoogleLogin } from '@react-oauth/google';
+
+
+
+
 
 interface NavbarProps {
   onToggleTheme: () => void;
@@ -24,10 +29,10 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ onToggleTheme }) => {
   const [loginOpen, setLoginOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
-  
+  const [error, setError] = useState(''); 
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
-  const { isAuthenticated, logout, login } = useAuth();
+  const { isAuthenticated, logout, login , googleLogin} = useAuth();
 
   const handleRegisterSuccess = async (username: string, password: string): Promise<void> => {
     try {
@@ -37,6 +42,18 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleTheme }) => {
     } catch (error) {
       console.error('Error logging in after registration:', error);
     }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    try {
+      await googleLogin(credentialResponse);
+    } catch (error) {
+      setError('Google sign-in failed');
+    }
+  };
+  
+  const handleGoogleError = () => {
+    setError('Google sign-in failed');
   };
 
   return (
@@ -84,7 +101,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleTheme }) => {
             </Button>
           ) : (
             <>
-              <Button 
+              {/* <Button 
                 color="inherit"
                 onClick={() => setLoginOpen(true)}
                 sx={{ 
@@ -111,7 +128,20 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleTheme }) => {
                 }}
               >
                 Register
-              </Button>
+              </Button> */}
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+            <GoogleLogin
+            theme= {isDarkMode ? 'filled_black' : 'outline'}
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              useOneTap
+            />
+            {error && (
+            <Typography color="error" variant="body2" sx={{ mt: 1 }}>
+              {error}
+            </Typography>
+          )}
+          </Box>
             </>
           )}
           

@@ -39,6 +39,10 @@ export const auth = {
     const response = await api.post('/auth/register', { username, email, password });
     return response.data;
   },
+  googleLogin: async (credential: string) => {
+    const response = await api.post('/auth/google', { credential });
+    return response.data;
+  },
 };
 
 export const beats = {

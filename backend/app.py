@@ -1,12 +1,14 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
-from flask_jwt_extended import JWTManager, create_access_token
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token
 from flask_cors import CORS, cross_origin
 from datetime import datetime, timedelta
 import os
 import mimetypes
 from dotenv import load_dotenv
+from google.oauth2 import id_token
+from google.auth.transport import requests
+from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
 
@@ -45,6 +47,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///bea
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'dev-key-change-in-production')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1)
+
+# Google OAuth configuration
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+if not GOOGLE_CLIENT_ID:
+    raise ValueError("GOOGLE_CLIENT_ID environment variable is not set")
 
 # Initialize extensions
 db = SQLAlchemy(app)
@@ -154,7 +161,8 @@ def register():
     db.session.add(user)
     db.session.commit()
     
-    return jsonify({"message": "User registered successfully"}), 201
+    access_token = create_access_token(identity=user.id)
+    return jsonify({"token": access_token, "user": {"username": user.username}}), 201
 
 @app.route('/api/auth/login', methods=['POST'])
 @cross_origin()
@@ -164,9 +172,63 @@ def login():
     
     if user and check_password_hash(user.password_hash, data['password']):
         access_token = create_access_token(identity=user.id)
-        return jsonify({"token": access_token, "user_id": user.id}), 200
+        return jsonify({"token": access_token, "user": {"username": user.username}}), 200
     
     return jsonify({"error": "Invalid credentials"}), 401
+
+@app.route('/api/auth/google', methods=['POST'])
+@cross_origin()
+def google_auth():
+    try:
+        data = request.get_json()
+        token = data.get('credential')
+        
+        if not token:
+            return jsonify({"error": "No token provided"}), 400
+
+        # Verify the token
+        idinfo = id_token.verify_oauth2_token(token, requests.Request(), GOOGLE_CLIENT_ID)
+        
+        if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+            raise ValueError('Invalid issuer')
+            
+        # Get user info from token
+        email = idinfo['email']
+        user = User.query.filter_by(email=email).first()
+        
+        if not user:
+            # Create new user if doesn't exist
+            username = email.split('@')[0]
+            base_username = username
+            counter = 1
+            
+            # Handle username conflicts
+            while User.query.filter_by(username=username).first():
+                username = f"{base_username}{counter}"
+                counter += 1
+            
+            user = User(
+                username=username,
+                email=email,
+                password_hash=None  # Google authenticated users don't need a password
+            )
+            db.session.add(user)
+            db.session.commit()
+        
+        # Create access token
+        access_token = create_access_token(identity=user.id)
+        return jsonify({
+            "token": access_token,
+            "user": {
+                "username": user.username,
+                "email": user.email
+            }
+        })
+        
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 401
+    except Exception as e:
+        return jsonify({"error": "Authentication failed"}), 401
 
 # Import routes after app and extensions are initialized
 from routes import *
