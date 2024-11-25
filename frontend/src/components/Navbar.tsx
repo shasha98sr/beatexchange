@@ -12,8 +12,12 @@ import {
   Tooltip,
   Container,
   Link,
+  Menu,
+  MenuItem,
 } from '@mui/material';
+import AccountCircle from '@mui/icons-material/AccountCircle';
 import { FaSun, FaMoon } from 'react-icons/fa';
+import SettingsIcon from '@mui/icons-material/Settings';
 import { useAuth } from '../context/AuthContext';
 import Login from './Login';
 import Register from './Register';
@@ -27,6 +31,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleTheme }) => {
   const [loginOpen, setLoginOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [error, setError] = useState('');
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
   const { isAuthenticated, logout, login, googleLogin, user } = useAuth();
@@ -52,6 +57,14 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleTheme }) => {
 
   const handleGoogleError = () => {
     setError('Google sign-in failed');
+  };
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
   };
 
   return (
@@ -83,45 +96,68 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleTheme }) => {
           spacing={{ xs: 1, sm: 2 }}
           alignItems="center"
         >
-          {isAuthenticated && (
-            <Button
-              component={RouterLink}
-              to="/feed"
-              color="inherit"
-              sx={{ textTransform: 'none' }}
-            >
-              Feed
-            </Button>
-          )}
+          
           {isAuthenticated ? (
             <>
-              {user?.profile_photo && (
-                <img
-                  src={user.profile_photo}
-                  alt="Profile"
-                  referrerPolicy="no-referrer"
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    marginRight: '8px',
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                <Tooltip title="Account">
+                  <IconButton
+                    onClick={handleMenuOpen}
+                    aria-label="account"
+                    aria-controls="account-menu"
+                    aria-haspopup="true"
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      {user?.profile_photo ? (
+                        <img
+                          src={user.profile_photo}
+                          alt="Profile"
+                          referrerPolicy="no-referrer"
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            marginRight: '8px',
+                          }}
+                        />
+                      ) : (
+                        <AccountCircle sx={{ width: 32, height: 32, marginRight: 1 }} />
+                      )}
+                      <Typography
+                        variant="body1"
+                        sx={{
+                          marginLeft: 1,
+                          color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000'
+                        }}
+                      >
+                        {user?.username || 'User'}
+                      </Typography>
+                    </Box>
+                  </IconButton>
+                </Tooltip>
+                <Menu
+                  id="account-menu"
+                  anchorEl={anchorEl}
+                  open={Boolean(anchorEl)}
+                  onClose={handleMenuClose}
+                  MenuListProps={{
+                    'aria-labelledby': 'basic-button',
                   }}
-                />
-              )}
-              <Button 
-                color="inherit"
-                onClick={logout}
-                sx={{ 
-                  display: { xs: 'none', sm: 'flex' },
-                  '&:hover': {
-                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'
-                  },
-                  color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-                  transition: 'color 0.3s ease, background-color 0.3s ease'
-                }}
-              >
-                Logout
-              </Button>
+                >
+                  <MenuItem onClick={onToggleTheme}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      {isDarkMode ? (
+                        <FaSun style={{ color: '#ffd700', fontSize: '1.2rem', marginRight: '8px' }} />
+                      ) : (
+                        <FaMoon style={{ fontSize: '1.2rem', marginRight: '8px' }} />
+                      )}
+                      {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+                    </Box>
+                  </MenuItem>
+                  <MenuItem onClick={logout}>Logout</MenuItem>
+                </Menu>
+              </Box>
+
             </>
           ) : (
             <>
@@ -144,54 +180,6 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleTheme }) => {
             </>
           )}
 
-          <Tooltip title={`Switch to ${isDarkMode ? 'light' : 'dark'} mode`}>
-            <IconButton
-              onClick={onToggleTheme}
-              sx={{
-                p: { xs: 1, sm: 1.5 },
-                color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-                transition: 'color 0.3s ease',
-                backgroundColor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 255, 255, 0.05)' 
-                  : 'rgba(0, 0, 0, 0.05)',
-                '&:hover': {
-                  transform: 'scale(1.1)',
-                  backgroundColor: theme.palette.mode === 'dark' 
-                    ? 'rgba(255, 255, 255, 0.1)' 
-                    : 'rgba(0, 0, 0, 0.1)',
-                },
-                '@media (prefers-reduced-motion: reduce)': {
-                  transition: 'none',
-                  '&:hover': {
-                    transform: 'none',
-                  },
-                },
-              }}
-            >
-              <Box
-                sx={{
-                  display: 'flex',
-                  animation: 'fadeIn 0.3s ease-in-out',
-                  '@keyframes fadeIn': {
-                    '0%': {
-                      opacity: 0,
-                      transform: 'rotate(-45deg)',
-                    },
-                    '100%': {
-                      opacity: 1,
-                      transform: 'rotate(0)',
-                    },
-                  },
-                }}
-              >
-                {isDarkMode ? (
-                  <FaSun style={{ color: '#ffd700', fontSize: '1.2rem' }} />
-                ) : (
-                  <FaMoon style={{ fontSize: '1.2rem' }} />
-                )}
-              </Box>
-            </IconButton>
-          </Tooltip>
         </Stack>
       </Toolbar>
 
