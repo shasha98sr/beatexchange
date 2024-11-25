@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import { Box, IconButton, Typography, TextField, Button, Stack, Alert, useTheme } from '@mui/material';
+import { Box, IconButton, Typography, TextField, Button, Stack, Alert, useTheme, Avatar } from '@mui/material';
 import { PlayArrow, Pause, Comment, Send } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { beats } from '../services/api';
@@ -10,6 +10,7 @@ interface AudioPlayerProps {
   beatId: number;
   title: string;
   username: string;
+  profilePicture?: string | null;
 }
 
 interface Comment {
@@ -20,7 +21,7 @@ interface Comment {
   created_at: string;
 }
 
-const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, username }) => {
+const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, username, profilePicture }) => {
   const { token } = useAuth();
   const theme = useTheme();
   const waveformRef = useRef<HTMLDivElement>(null);
@@ -63,8 +64,8 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
             cursorColor: theme.palette.secondary.main,
             cursorWidth: 1,
             barWidth: 3,
-            barGap: 2,
-            height: 80,
+            barGap: 0.5,
+            height: 50,
             normalize: true,
             mediaControls: false,
             hideScrollbar: true,
@@ -289,7 +290,14 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
   const commentMarkersRef = useRef<HTMLDivElement>(null);
 
   return (
-    <Box sx={{ width: '100%', padding: 2, borderRadius: 2, backgroundColor: theme.palette.background.paper }}>
+    <Box sx={{ 
+      width: '100%', 
+      padding: 2, 
+      borderRadius: 0, 
+      backgroundColor: theme.palette.background.default,
+      borderBottom: '1px solid',
+      borderColor: 'divider'
+    }}>
       {error && (
         <Alert severity="error" sx={{ marginBottom: 2 }}>
           {error}
@@ -297,24 +305,24 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
       )}
 
       <Stack direction="row" spacing={2} alignItems="center">
-        <IconButton 
-          onClick={handlePlayPause} 
-          sx={{
-            backgroundColor: theme.palette.primary.main,
-            '&:hover': {
-              backgroundColor: theme.palette.primary.dark,
-            },
-            color: 'white'
+        <Avatar 
+          src={profilePicture || undefined} 
+          alt={username}
+          sx={{ 
+            width: 44, 
+            height: 44,
+            borderRadius: 1,
+            bgcolor: theme.palette.primary.main
           }}
         >
-          {isPlaying ? <Pause /> : <PlayArrow />}
-        </IconButton>
+          {username[0].toUpperCase()}
+        </Avatar>
         <Box sx={{ flexGrow: 1 }}>
-          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-            {title}
-          </Typography>
-          <Typography variant="h6" sx={{ color: theme.palette.text.primary, mt: -0.5 }}>
+        <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mt: -0.5 }}>
             {username}
+          </Typography>
+          <Typography variant="body1" sx={{ color: theme.palette.text.primary }}>
+            {title}
           </Typography>
         </Box>
         <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
@@ -322,24 +330,36 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
         </Typography>
       </Stack>
 
-      <Box sx={{ position: 'relative', width: '100%', marginBottom: 4 }}>
-        <Box ref={waveformRef} sx={{ width: '100%' }} />
-        <Box 
-          ref={commentMarkersRef}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', marginY: 2 }}>
+        <IconButton 
+          onClick={handlePlayPause} 
           sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            pointerEvents: 'none',
-            zIndex: 10
+            color: 'white',
+            backgroundColor: theme.palette.primary.main
           }}
-        />
+        >
+          {isPlaying ? <Pause /> : <PlayArrow />}
+        </IconButton>
+        
+        <Box sx={{ position: 'relative', width: '100%' }}>
+          <Box ref={waveformRef} sx={{ width: '100%' }} />
+          <Box 
+            ref={commentMarkersRef}
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              pointerEvents: 'none',
+              zIndex: 10
+            }}
+          />
+        </Box>
       </Box>
 
       {hasPlayed && (
-        <Box sx={{ marginTop: 2 }}>
+        <Box sx={{ marginTop: 3 }}>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             <TextField
               fullWidth
@@ -353,7 +373,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
               }}
               sx={{
                 '& .MuiInputBase-root': {
-                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
                   borderRadius: '9999px',
                   padding: '0.5rem 1rem'
                 },

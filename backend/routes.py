@@ -67,7 +67,8 @@ def get_beats():
         'audio_url': get_full_url(beat.audio_url),
         'author': beat.author.username if beat.author else 'Unknown User',
         'created_at': beat.created_at.isoformat(),
-        'likes_count': len(beat.likes)
+        'likes_count': len(beat.likes),
+        'author_photo': get_full_url(beat.author.profile_photo) if beat.author and beat.author.profile_photo else None
     } for beat in beats]), 200
 
 # Comment routes

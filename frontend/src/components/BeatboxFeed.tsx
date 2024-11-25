@@ -7,21 +7,11 @@ import {
 import {
   Mic as MicIcon,
 } from '@mui/icons-material';
-import AudioPlayer from './AudioPlayer';
 import RecordBeat from './RecordBeat';
 import BeatCard from './BeatCard';
 import { beats as beatsService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-
-interface Beat {
-  id: number;
-  title: string;
-  audio_url: string;
-  author: string;
-  created_at: string;
-  likes_count: number;
-  liked_by_user: boolean;
-}
+import { Beat } from '../types';
 
 const BeatboxFeed: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -38,6 +28,7 @@ const BeatboxFeed: React.FC = () => {
     try {
       setLoading(true);
       const response = await beatsService.getAll();
+      console.log('Beats response:', response);
       setBeatsList(response);
     } catch (error) {
       console.error('Error fetching beats:', error);
@@ -71,7 +62,15 @@ const BeatboxFeed: React.FC = () => {
   }
 
   return (
-    <Box sx={{ maxWidth: "md", mx: "auto", p: 2, position: 'relative' }}>
+    <Box sx={{ 
+      maxWidth: "md", 
+      mx: "auto", 
+      p: 2, 
+      position: 'relative',
+      borderLeft: '1px solid',
+      borderRight: '1px solid',
+      borderColor: 'divider',
+    }}>
       {beatsList.map((beat) => (
         <BeatCard
           key={beat.id}
