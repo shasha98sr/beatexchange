@@ -340,7 +340,7 @@ const RecordBeat: React.FC<RecordBeatProps> = ({ open, onClose, onUploadComplete
           mb: 2,
           color: theme.palette.text.secondary
         }}>
-          Drop some beats and inspire others!
+          Spit some bars and inspire others!
         </Typography>
         
         <Box sx={{ 
