@@ -13,6 +13,11 @@ interface AuthContextType {
   googleLogin: (credentialResponse: CredentialResponse) => Promise<void>;
   logout: () => void;
   token: string | null;
+  user: {
+    username: string;
+    email: string;
+    profile_photo: string | null;
+  } | null;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -28,6 +33,7 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!token);
+  const [user, setUser] = useState<AuthContextType['user']>(null);
 
   useEffect(() => {
     if (token) {
@@ -56,6 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       const response = await auth.googleLogin(credentialResponse.credential);
       setToken(response.token);
+      setUser(response.user);
     } catch (error) {
       console.error('Google login failed:', error);
       throw error;
@@ -64,11 +71,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setToken(null);
+    setUser(null);
   };
 
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <AuthContext.Provider value={{ isAuthenticated, login, googleLogin, logout, token }}>
+      <AuthContext.Provider value={{ isAuthenticated, login, googleLogin, logout, token, user }}>
         {children}
       </AuthContext.Provider>
     </GoogleOAuthProvider>

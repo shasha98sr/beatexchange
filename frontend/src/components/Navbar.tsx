@@ -18,10 +18,6 @@ import Login from './Login';
 import Register from './Register';
 import { GoogleLogin } from '@react-oauth/google';
 
-
-
-
-
 interface NavbarProps {
   onToggleTheme: () => void;
 }
@@ -29,10 +25,10 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ onToggleTheme }) => {
   const [loginOpen, setLoginOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
-  const [error, setError] = useState(''); 
+  const [error, setError] = useState('');
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
-  const { isAuthenticated, logout, login , googleLogin} = useAuth();
+  const { isAuthenticated, logout, login, googleLogin, user } = useAuth();
 
   const handleRegisterSuccess = async (username: string, password: string): Promise<void> => {
     try {
@@ -48,18 +44,19 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleTheme }) => {
     try {
       await googleLogin(credentialResponse);
     } catch (error) {
-      setError('Google sign-in failed');
+      console.error('Google sign-in error:', error);
+      setError(error instanceof Error ? error.message : 'Google sign-in failed');
     }
   };
-  
+
   const handleGoogleError = () => {
     setError('Google sign-in failed');
   };
 
   return (
-    <AppBar 
-      position="static" 
-      sx={{ 
+    <AppBar
+      position="static"
+      sx={{
         background: theme.palette.mode === 'dark' ? '#000000' : '#ffffff',
         boxShadow: 'none',
         borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)'}`,
@@ -67,57 +64,41 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleTheme }) => {
       }}
     >
       <Toolbar sx={{ justifyContent: 'space-between' }}>
-        <Typography 
-          variant="h6" 
-          component="div" 
+        <Typography
+          variant="h6"
+          component="div"
           className="gradient-text"
-          sx={{ 
+          sx={{
             fontWeight: 'bold',
             fontSize: { xs: '1.25rem', sm: '1.5rem' },
           }}
         >
           Spit.box
         </Typography>
-        
-        <Stack 
-          direction="row" 
-          spacing={{ xs: 1, sm: 2 }} 
+
+        <Stack
+          direction="row"
+          spacing={{ xs: 1, sm: 2 }}
           alignItems="center"
         >
           {isAuthenticated ? (
-            <Button 
-              color="inherit"
-              onClick={logout}
-              sx={{ 
-                display: { xs: 'none', sm: 'flex' },
-                '&:hover': {
-                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'
-                },
-                color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-                transition: 'color 0.3s ease, background-color 0.3s ease'
-              }}
-            >
-              Logout
-            </Button>
-          ) : (
             <>
-              {/* <Button 
-                color="inherit"
-                onClick={() => setLoginOpen(true)}
-                sx={{ 
-                  display: { xs: 'none', sm: 'flex' },
-                  '&:hover': {
-                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'
-                  },
-                  color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-                  transition: 'color 0.3s ease, background-color 0.3s ease'
-                }}
-              >
-                Login
-              </Button>
+              {user?.profile_photo && (
+                <img
+                  src={user.profile_photo}
+                  alt="Profile"
+                  referrerPolicy="no-referrer"
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    marginRight: '8px',
+                  }}
+                />
+              )}
               <Button 
                 color="inherit"
-                onClick={() => setRegisterOpen(true)}
+                onClick={logout}
                 sx={{ 
                   display: { xs: 'none', sm: 'flex' },
                   '&:hover': {
@@ -127,24 +108,30 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleTheme }) => {
                   transition: 'color 0.3s ease, background-color 0.3s ease'
                 }}
               >
-                Register
-              </Button> */}
+                Logout
+              </Button>
+            </>
+          ) : (
+            <>
               <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-            <GoogleLogin
-            theme= {isDarkMode ? 'filled_black' : 'outline'}
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              useOneTap
-            />
-            {error && (
-            <Typography color="error" variant="body2" sx={{ mt: 1 }}>
-              {error}
-            </Typography>
-          )}
-          </Box>
+                <GoogleLogin
+                  theme={isDarkMode ? 'filled_black' : 'outline'}
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  useOneTap={false}
+                  context="signin"
+                  type="standard"
+                  cancel_on_tap_outside={false}
+                />
+                {error && (
+                  <Typography color="error" variant="body2" sx={{ mt: 1 }}>
+                    {error}
+                  </Typography>
+                )}
+              </Box>
             </>
           )}
-          
+
           <Tooltip title={`Switch to ${isDarkMode ? 'light' : 'dark'} mode`}>
             <IconButton
               onClick={onToggleTheme}
@@ -188,7 +175,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleTheme }) => {
                 {isDarkMode ? (
                   <FaSun style={{ color: '#ffd700', fontSize: '1.2rem' }} />
                 ) : (
-                  <FaMoon style={{ color: '#718096', fontSize: '1.2rem' }} />
+                  <FaMoon style={{ fontSize: '1.2rem' }} />
                 )}
               </Box>
             </IconButton>
@@ -196,10 +183,10 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleTheme }) => {
         </Stack>
       </Toolbar>
 
-      <Login 
-        open={loginOpen} 
-        onClose={() => setLoginOpen(false)} 
-        onLogin={login} 
+      <Login
+        open={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        onLogin={login}
       />
       <Register
         open={registerOpen}

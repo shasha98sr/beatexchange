@@ -63,6 +63,7 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
+    profile_photo = db.Column(db.String(500))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     beats = db.relationship('Beat', backref='author', lazy=True)
 
@@ -210,20 +211,30 @@ def google_auth():
             user = User(
                 username=username,
                 email=email,
-                password_hash=None  # Google authenticated users don't need a password
+                password_hash=None,  # Google authenticated users don't need a password
+                profile_photo=idinfo.get('picture')  # Get profile photo URL from Google
             )
             db.session.add(user)
             db.session.commit()
+        else:
+            # Update existing user's profile photo if it has changed
+            profile_photo = idinfo.get('picture')
+            if profile_photo and user.profile_photo != profile_photo:
+                user.profile_photo = profile_photo
+                db.session.commit()
         
         # Create access token
         access_token = create_access_token(identity=user.id)
-        return jsonify({
+        response_data = {
             "token": access_token,
             "user": {
                 "username": user.username,
-                "email": user.email
+                "email": user.email,
+                "profile_photo": user.profile_photo
             }
-        })
+        }
+        
+        return jsonify(response_data)
         
     except ValueError as e:
         return jsonify({"error": str(e)}), 401
