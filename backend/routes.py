@@ -16,7 +16,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 def get_full_url(path):
     """Helper function to convert relative paths to full URLs"""
     if path.startswith('/uploads/'):
-        return f"http://127.0.0.1:5000{path}"
+        return f"http://127.0.0.1:8000{path}"
     return path
 
 # Beat routes
