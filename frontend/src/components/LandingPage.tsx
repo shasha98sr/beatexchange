@@ -17,10 +17,11 @@ const LandingPage: React.FC = () => {
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
     try {
+      console.log('Google response:', credentialResponse);
       await googleLogin(credentialResponse);
       navigate('/feed');
     } catch (error) {
-      setError('Google sign-in failed');
+      console.error('Google sign-in error:', error);
     }
   };
   
