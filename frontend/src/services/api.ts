@@ -43,6 +43,10 @@ export const auth = {
     const response = await api.post('/auth/google', { credential });
     return response.data;
   },
+  getCurrentUser: async () => {
+    const response = await api.get('/auth/me');
+    return response.data;
+  },
 };
 
 export const beats = {

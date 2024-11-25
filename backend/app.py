@@ -241,6 +241,20 @@ def google_auth():
     except Exception as e:
         return jsonify({"error": "Authentication failed"}), 401
 
+@app.route('/api/auth/me', methods=['GET'])
+@jwt_required()
+def get_current_user():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+        
+    return jsonify({
+        "username": user.username,
+        "email": user.email,
+        "profile_photo": user.profile_photo
+    }), 200
+
 # Import routes after app and extensions are initialized
 from routes import *
 

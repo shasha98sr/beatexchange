@@ -33,17 +33,41 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!token);
-  const [user, setUser] = useState<AuthContextType['user']>(null);
+  const [user, setUser] = useState<AuthContextType['user']>(() => {
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
 
   useEffect(() => {
     if (token) {
       localStorage.setItem('token', token);
       setIsAuthenticated(true);
+      // Fetch user data if we have a token but no user data
+      if (!user) {
+        auth.getCurrentUser()
+          .then(userData => {
+            setUser(userData);
+            localStorage.setItem('user', JSON.stringify(userData));
+          })
+          .catch(error => {
+            console.error('Failed to fetch user data:', error);
+            // If we can't fetch user data, the token might be invalid
+            logout();
+          });
+      }
     } else {
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       setIsAuthenticated(false);
+      setUser(null);
     }
   }, [token]);
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+    }
+  }, [user]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -72,6 +96,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setToken(null);
     setUser(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
   };
 
   return (
