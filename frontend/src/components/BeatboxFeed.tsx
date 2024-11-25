@@ -1,34 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import {
   Box,
-  Paper,
-  Typography,
-  Stack,
-  IconButton,
-  Avatar,
   Button,
-  useTheme,
-  Link
+  Fab,
 } from '@mui/material';
 import {
-  Favorite,
-  FavoriteBorder,
-  Comment as CommentIcon,
-  Share as ShareIcon,
-  MoreVert as MoreVertIcon,
   Mic as MicIcon,
-  Repeat as RepeatIcon,
-  Google as GoogleIcon,
-  GitHub as GitHubIcon
 } from '@mui/icons-material';
 import AudioPlayer from './AudioPlayer';
-import RecordBeat from './RecordBeat'; // Import RecordBeat component
+import RecordBeat from './RecordBeat';
 import BeatCard from './BeatCard';
-import { beats } from '../services/api';
+import { beats as beatsService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { GoogleLogin } from '@react-oauth/google';
 
-interface Post {
+interface Beat {
   id: number;
   title: string;
   audio_url: string;
@@ -39,23 +24,21 @@ interface Post {
 }
 
 const BeatboxFeed: React.FC = () => {
-  const theme = useTheme();
-  const { isAuthenticated , googleLogin } = useAuth();
-  const [activeTab, setActiveTab] = useState('forYou');
-  const [posts, setPosts] = useState<Post[]>([]);
+  const { isAuthenticated } = useAuth();
+  const [beatsList, setBeatsList] = useState<Beat[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showRecordDialog, setShowRecordDialog] = useState(false); // Add state for RecordBeat dialog
+  const [showRecordDialog, setShowRecordDialog] = useState(false);
 
   useEffect(() => {
-    fetchPosts();
+    fetchBeats();
   }, []);
 
-  const fetchPosts = async () => {
+  const fetchBeats = async () => {
     try {
       setLoading(true);
-      const response = await beats.getAll();
-      setPosts(response); // The response is directly the array of beats
+      const response = await beatsService.getAll();
+      setBeatsList(response);
     } catch (error) {
       console.error('Error fetching beats:', error);
       setError('Failed to load beats. Please try again later.');
@@ -64,193 +47,60 @@ const BeatboxFeed: React.FC = () => {
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse: any) => {
-    try {
-      await googleLogin(credentialResponse);
-    } catch (error) {
-      setError('Google sign-in failed');
-    }
-  };
-  
-  const handleGoogleError = () => {
-    setError('Google sign-in failed');
-  };
-
-  const handleLike = async (postId: number) => {
-    const updatedPosts = posts.map(post => {
-      if (post.id === postId) {
-        return { ...post, liked_by_user: !post.liked_by_user, likes_count: post.likes_count + (post.liked_by_user ? -1 : 1) };
+  const handleLike = async (beatId: number) => {
+    const updatedBeats = beatsList.map(beat => {
+      if (beat.id === beatId) {
+        return { ...beat, liked_by_user: !beat.liked_by_user, likes_count: beat.likes_count + (beat.liked_by_user ? -1 : 1) };
       }
-      return post;
+      return beat;
     });
-    setPosts(updatedPosts);
+    setBeatsList(updatedBeats);
   };
 
   const handleRecordComplete = () => {
-    fetchPosts(); // Refresh the feed after new beat is uploaded
+    fetchBeats();
+    setShowRecordDialog(false);
   };
 
   if (loading) {
-    return <Typography>Loading...</Typography>;
+    return <Box>Loading...</Box>;
   }
 
   if (error) {
-    return <Typography color="error">{error}</Typography>;
+    return <Box color="error">{error}</Box>;
   }
 
   return (
-    <Box maxWidth="md" sx={{ 
-        mx: 'auto', 
-        p: 2,
-        minHeight: '60vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
-        mb: 4,
-        color: theme.palette.text.primary,
-        transition: 'color 0.3s ease'
-      }}>
-      {/* Hero Section */}
-      <Box sx={{ 
-        p: 4, 
-        maxWidth: 800,
-        color: theme.palette.text.primary
-      }}>
-        <Typography 
-          variant="h1" 
-          component="h1" 
-          sx={{ 
-            fontSize: { xs: '3.5rem', md: '5rem' },
-            fontWeight: 700,
-            lineHeight: 1,
-            mb: 1,
-            '& .green-text': {
-              display: 'block',
-              background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 20%, #2E7D32 40%, #1B5E20 60%, #45a049 80%, #4CAF50 100%)',
-              backgroundSize: '200% auto',
-              WebkitBackgroundClip: 'text',
-              backgroundClip: 'text',
-              color: 'transparent',
-              animation: 'gradient 3s ease infinite',
-              mb: 0.5
-            },
-            '& .white-text': {
-              display: 'block',
-              color: theme.palette.text.primary,
-              fontSize: { xs: '3.5rem', md: '5rem' },
-              mb: 0.5
-            },
-            '@keyframes gradient': {
-              '0%': {
-                backgroundPosition: '0% 50%'
-              },
-              '50%': {
-                backgroundPosition: '100% 50%'
-              },
-              '100%': {
-                backgroundPosition: '0% 50%'
-              }
-            }
+    <Box sx={{ maxWidth: "md", mx: "auto", p: 2, position: 'relative' }}>
+      {beatsList.map((beat) => (
+        <BeatCard
+          key={beat.id}
+          beat={beat}
+          onLike={() => handleLike(beat.id)}
+        />
+      ))}
+      
+      {isAuthenticated && (
+        <Fab
+          color="primary"
+          aria-label="record"
+          onClick={() => setShowRecordDialog(true)}
+          sx={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
           }}
         >
-          <span className="green-text">Your beats,</span>
-          <span className="white-text">your stage,</span>
-          <span className="white-text">no limits.</span>
-        </Typography>
-        <Typography 
-          sx={{ 
-            fontSize: '1.25rem',
-            my: 4,
-            opacity: 0.9,
-            maxWidth: 600,
-            mx: 'auto',
-            color: theme.palette.text.secondary
-          }}
-        >
-          Spit.box is like Twitter, but for beatboxers. Drop your routines, share your sound, and skip the noise.
-        </Typography>
+          <MicIcon />
+        </Fab>
+      )}
 
-        {/* Record New Beat Button */}
-        {isAuthenticated ? (
-          <Button
-            fullWidth
-            variant="contained"
-            size="large"
-            startIcon={<MicIcon />}
-            onClick={() => setShowRecordDialog(true)}
-            sx={{ 
-              mt: 4,
-              borderRadius: 2,
-              py: 2,
-              px: 3,
-              bgcolor: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
-              color: theme.palette.text.primary,
-              textTransform: 'none',
-              fontSize: '1.1rem',
-              '&:hover': {
-                bgcolor: 'rgba(255, 255, 255, 0.15)',
-              }
-            }}
-          >
-            Drop a Beat
-          </Button>
-        ) : (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, gap: 2, alignItems: 'center' }}>
-            <GoogleLogin
-              size='large'
-              text='signup_with'
-              width='800px'
-              theme={theme.palette.mode === 'dark' ? 'outline' : 'filled_black'}
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              useOneTap
-            />
-            <Link 
-              href="https://github.com/shasha98sr/beatexchange" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              sx={{ textDecoration: 'none' }}
-            >
-              <Button
-                variant="contained"
-                size="large"
-                startIcon={<GitHubIcon />}
-                sx={{ 
-                  height: '46px',
-                  borderRadius: 2,
-                  bgcolor: 'rgba(255, 255, 255, 0.1)',
-                  backdropFilter: 'blur(10px)',
-                  color: theme.palette.text.primary,
-                  textTransform: 'none',
-                  fontSize: '1rem',
-                  '&:hover': {
-                    bgcolor: 'rgba(255, 255, 255, 0.15)',
-                  }
-                }}
-              >
-                Star on GitHub
-              </Button>
-            </Link>
-          </Box>
-        )}
-      </Box>
-
-      {/* RecordBeat Dialog */}
+      {/* Record Beat Dialog */}
       <RecordBeat
         open={showRecordDialog}
         onClose={() => setShowRecordDialog(false)}
         onUploadComplete={handleRecordComplete}
       />
-
-      {/* Feed Content */}
-      <Stack spacing={2} sx={{ width: '100%', mt: 6, color: theme.palette.text.primary }}>
-        {posts.map((post) => (
-          <BeatCard key={post.id} beat={post} onLike={handleLike} />
-        ))}
-      </Stack>
     </Box>
   );
 };

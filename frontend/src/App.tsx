@@ -8,6 +8,7 @@ import {
 } from '@mui/material';
 import BeatboxFeed from './components/BeatboxFeed';
 import RecordBeat from './components/RecordBeat';
+import LandingPage from './components/LandingPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import * as beatService from './services/api';
 import Navbar from './components/Navbar';
@@ -122,7 +123,10 @@ function AppContent() {
         <Navbar onToggleTheme={toggleTheme} />
         <Container maxWidth="lg">
           <Box sx={{ mt: 4, pb: 4 }}>
-            <BeatboxFeed />
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/feed" element={<BeatboxFeed />} />
+            </Routes>
           </Box>
         </Container>
       </Router>

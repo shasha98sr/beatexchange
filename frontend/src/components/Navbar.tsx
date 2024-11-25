@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   AppBar,
   Toolbar,
@@ -66,11 +67,14 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleTheme }) => {
       <Toolbar sx={{ justifyContent: 'space-between' }}>
         <Typography
           variant="h6"
-          component="div"
+          component={RouterLink}
+          to="/"
           className="gradient-text"
           sx={{
             fontWeight: 'bold',
             fontSize: { xs: '1.25rem', sm: '1.5rem' },
+            textDecoration: 'none',
+            color: 'inherit'
           }}
         >
           Spit.box
@@ -81,6 +85,16 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleTheme }) => {
           spacing={{ xs: 1, sm: 2 }}
           alignItems="center"
         >
+          {isAuthenticated && (
+            <Button
+              component={RouterLink}
+              to="/feed"
+              color="inherit"
+              sx={{ textTransform: 'none' }}
+            >
+              Feed
+            </Button>
+          )}
           {isAuthenticated ? (
             <>
               {user?.profile_photo && (
