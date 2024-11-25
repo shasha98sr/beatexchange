@@ -73,8 +73,6 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleTheme }) => {
           sx={{
             fontWeight: 'bold',
             fontSize: { xs: '1.25rem', sm: '1.5rem' },
-            textDecoration: 'none',
-            color: 'inherit'
           }}
         >
           Spit.box
