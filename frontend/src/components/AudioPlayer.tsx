@@ -26,6 +26,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
   const theme = useTheme();
   const waveformRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
+  const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
@@ -34,6 +35,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
   const [newComment, setNewComment] = useState('');
   const [isDestroyed, setIsDestroyed] = useState(false);
   const [hasPlayed, setHasPlayed] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -41,20 +43,39 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
+  const setErrorWithDelay = useCallback((errorMessage: string | null) => {
+    if (errorTimeoutRef.current) {
+      clearTimeout(errorTimeoutRef.current);
+      errorTimeoutRef.current = null;
+    }
+    
+    if (errorMessage === null) {
+      setError(null);
+      return;
+    }
+
+    errorTimeoutRef.current = setTimeout(() => {
+      if (!isDestroyed) {
+        setError(errorMessage);
+      }
+    }, 1500); // 1 second delay before showing error
+  }, [isDestroyed]);
+
   useEffect(() => {
     if (!audioUrl || !token) {
-      setError('Please sign in to play audio');
+      setErrorWithDelay('Please sign in to play audio');
+      setIsLoading(false);
       return;
     }
 
     const initializeAudio = async () => {
       try {
-        setError(null);
+        setIsLoading(true);
+        setErrorWithDelay(null);
         setIsDestroyed(false);
         
         // Append token to URL
         const authenticatedUrl = `${audioUrl}${audioUrl.includes('?') ? '&' : '?'}token=${token}`;
-        console.log('Loading audio from URL:', authenticatedUrl);
 
         if (waveformRef.current && !wavesurfer.current) {
           const ws = WaveSurfer.create({
@@ -81,9 +102,10 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
           ws.on('pause', () => setIsPlaying(false));
           ws.on('ready', () => {
             if (!isDestroyed) {
-              setError(null);
               setDuration(ws.getDuration());
               updateCommentMarkers();
+              setErrorWithDelay(null);
+              setIsLoading(false);
             }
           });
           ws.on('audioprocess', () => {
@@ -120,7 +142,8 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
           ws.on('error', (error) => {
             console.error('WaveSurfer error:', error);
             if (!isDestroyed) {
-              setError('Error loading audio. Please try again later.');
+              setErrorWithDelay('Error loading audio. Please try again later.');
+              setIsLoading(false);
             }
           });
 
@@ -129,13 +152,17 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
           } catch (error) {
             console.error('Error loading audio:', error);
             if (!isDestroyed) {
-              setError('Error loading audio. Please try again later.');
+              setErrorWithDelay('Error loading audio. Please try again later.');
+              setIsLoading(false);
             }
           }
         }
       } catch (err) {
         console.error('Error initializing audio:', err);
-        setError('Error loading audio');
+        if (!isDestroyed) {
+          setErrorWithDelay('Error loading audio');
+          setIsLoading(false);
+        }
       }
     };
 
@@ -143,13 +170,16 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
 
     return () => {
       setIsDestroyed(true);
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
       if (wavesurfer.current) {
         wavesurfer.current.unAll();
         wavesurfer.current.destroy();
         wavesurfer.current = null;
       }
     };
-  }, [audioUrl, comments, isDestroyed, token]);
+  }, [audioUrl, comments, isDestroyed, token, setErrorWithDelay]);
 
   const handlePlayPause = () => {
     if (!wavesurfer.current) return;
@@ -255,7 +285,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
       })));
     } catch (error) {
       console.error('Error fetching comments:', error);
-      setError('Failed to load comments');
     }
   }, [beatId, token]);
 
@@ -268,7 +297,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
 
     try {
       if (!token) {
-        setError('Please log in to comment');
+        setErrorWithDelay('Please log in to comment');
         return;
       }
 
@@ -283,7 +312,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
       setNewComment('');
     } catch (error) {
       console.error('Error adding comment:', error);
-      setError('Failed to add comment');
+      setErrorWithDelay('Failed to add comment');
     }
   };
 
@@ -298,12 +327,29 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
       border: '1px solid',
       borderColor: 'divider'
     }}>
-      {error && (
+      {error && !isLoading && (
         <Alert severity="error" sx={{ marginBottom: 2 }}>
           {error}
         </Alert>
       )}
-
+      {isLoading && (
+        <Box sx={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          bgcolor: 'rgba(255, 255, 255, 0.1)',
+          zIndex: 1
+        }}>
+          <Typography variant="body2" color="text.secondary">
+            Loading audio...
+          </Typography>
+        </Box>
+      )}
       <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%', justifyContent: 'space-between' }}>
         <Stack direction="row" spacing={2} alignItems="center">
           <Avatar 
