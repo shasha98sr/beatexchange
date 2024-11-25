@@ -292,10 +292,10 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
   return (
     <Box sx={{ 
       width: '100%', 
-      padding: 2, 
+      padding: '20px', 
       borderRadius: 0, 
       backgroundColor: theme.palette.background.default,
-      borderBottom: '1px solid',
+      border: '1px solid',
       borderColor: 'divider'
     }}>
       {error && (
@@ -304,27 +304,28 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
         </Alert>
       )}
 
-      <Stack direction="row" spacing={2} alignItems="center">
-        <Avatar 
-          src={profilePicture || undefined} 
-          alt={username}
-          sx={{ 
-            width: 44, 
-            height: 44,
-            borderRadius: 1,
-            bgcolor: theme.palette.primary.main
-          }}
-        >
-          {username[0].toUpperCase()}
-        </Avatar>
-        <Box sx={{ flexGrow: 1 }}>
-        <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mt: -0.5 }}>
-            {username}
-          </Typography>
-          <Typography variant="body1" sx={{ color: theme.palette.text.primary }}>
-            {title}
-          </Typography>
-        </Box>
+      <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%', justifyContent: 'space-between' }}>
+        <Stack direction="row" spacing={2} alignItems="center">
+          <Avatar 
+            src={profilePicture || undefined} 
+            alt={username}
+            sx={{ 
+              width: 30, 
+              height: 30,
+              bgcolor: theme.palette.primary.main
+            }}
+          >
+            {username[0].toUpperCase()}
+          </Avatar>
+          <Stack spacing={0} alignItems="left">
+            <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mt: -0.5 }}>
+              {'@' + username}
+            </Typography>
+            <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
+              {title}
+            </Typography>
+          </Stack>
+        </Stack>
         <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
           {formatTime(currentTime)} / {formatTime(duration)}
         </Typography>
@@ -334,8 +335,10 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
         <IconButton 
           onClick={handlePlayPause} 
           sx={{
-            color: 'white',
-            backgroundColor: theme.palette.primary.main
+            color: theme.palette.primary.main,
+            borderRadius: '50%',
+            border: '1px solid',
+            borderColor: theme.palette.primary.main,
           }}
         >
           {isPlaying ? <Pause /> : <PlayArrow />}
@@ -359,7 +362,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
       </Box>
 
       {hasPlayed && (
-        <Box sx={{ marginTop: 3 }}>
+        <Box sx={{ marginTop: 4 }}>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             <TextField
               fullWidth

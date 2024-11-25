@@ -133,6 +133,7 @@ const LandingPage: React.FC = () => {
         ) : (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, gap: 2, alignItems: 'center' }}>
             <GoogleLogin
+           text='continue_with' 
               onSuccess={handleGoogleSuccess}
               onError={handleGoogleError}
             />

@@ -64,8 +64,7 @@ const BeatboxFeed: React.FC = () => {
   return (
     <Box sx={{ 
       maxWidth: "md", 
-      mx: "auto", 
-      p: 2, 
+      mx: "auto",  
       position: 'relative',
       borderLeft: '1px solid',
       borderRight: '1px solid',
