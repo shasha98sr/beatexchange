@@ -48,20 +48,21 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///bea
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'dev-key-change-in-production')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1)
+app.config['ADMIN_SECRET'] = os.getenv('ADMIN_SECRET', 'your-admin-secret')  # Add this to your Render env variables
 
 # Enable SQLAlchemy logging
 import logging
 logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
+# Initialize extensions
+db = SQLAlchemy(app)
+jwt = JWTManager(app)
+
 # Google OAuth configuration
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 if not GOOGLE_CLIENT_ID:
     raise ValueError("GOOGLE_CLIENT_ID environment variable is not set")
-
-# Initialize extensions
-db = SQLAlchemy(app)
-jwt = JWTManager(app)
 
 def init_db():
     print("Initializing database...")
@@ -81,13 +82,26 @@ def init_db():
         print(f"Error initializing database: {str(e)}")
         raise
 
+def reset_db():
+    print("Resetting database...")
+    try:
+        with app.app_context():
+            print("Dropping all tables...")
+            db.drop_all()
+            print("Creating new tables...")
+            db.create_all()
+            print("Database reset successfully")
+    except Exception as e:
+        print(f"Error resetting database: {str(e)}")
+        raise
+
 # Models
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
-    profile_photo = db.Column(db.String(500))
+    profile_photo = db.Column(db.String(500), nullable=True, default=None)  # Made nullable
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     beats = db.relationship('Beat', backref='author', lazy=True)
 
@@ -308,11 +322,29 @@ def get_current_user():
         "profile_photo": user.profile_photo
     })
 
-# Import routes after app and extensions are initialized
-from routes import *
+# Add a protected endpoint to reset the database
+@app.route('/api/admin/reset-db', methods=['POST'])
+def admin_reset_db():
+    admin_secret = request.headers.get('Admin-Secret')
+    if not admin_secret or admin_secret != app.config['ADMIN_SECRET']:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        reset_db()
+        return jsonify({"message": "Database reset successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Initialize database on startup
+with app.app_context():
+    try:
+        # Try to create tables if they don't exist
+        db.create_all()
+        print("Database initialized successfully")
+    except Exception as e:
+        print(f"Error during database initialization: {str(e)}")
 
 if __name__ == '__main__':
-    init_db()  # Initialize database before running the app
     app.run(debug=True)
 else:
     # Initialize database when running in production
