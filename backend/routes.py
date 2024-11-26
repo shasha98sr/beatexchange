@@ -16,13 +16,14 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 def get_full_url(path):
     """Helper function to convert relative paths to full URLs"""
     if path.startswith('/uploads/'):
-        return f"http://127.0.0.1:8000{path}"
+        # Use the actual domain from request
+        return f"{request.url_root.rstrip('/')}{path}"
     return path
 
 # Beat routes
 @app.route('/api/beats', methods=['POST'])
 @jwt_required()
-@cross_origin()
+@cross_origin(supports_credentials=True)
 def create_beat():
     if 'audio' not in request.files:
         return jsonify({"error": "No audio file provided"}), 400
@@ -52,29 +53,54 @@ def create_beat():
             "id": beat.id,
             "title": beat.title,
             "description": beat.description,
-            "audio_url": get_full_url(beat.audio_url)
+            "audio_url": get_full_url(beat.audio_url),
+            "user_id": beat.user_id,
+            "username": beat.author.username,
+            "created_at": beat.created_at.isoformat(),
+            "likes_count": 0,
+            "liked_by_user": False
         }
     }), 201
 
 @app.route('/api/beats', methods=['GET'])
-@cross_origin()
+@cross_origin(supports_credentials=True)
 def get_beats():
-    beats = Beat.query.order_by(Beat.created_at.desc()).all()
-    return jsonify([{
-        'id': beat.id,
-        'title': beat.title,
-        'description': beat.description,
-        'audio_url': get_full_url(beat.audio_url),
-        'author': beat.author.username if beat.author else 'Unknown User',
-        'created_at': beat.created_at.isoformat(),
-        'likes_count': len(beat.likes),
-        'author_photo': get_full_url(beat.author.profile_photo) if beat.author and beat.author.profile_photo else None
-    } for beat in beats]), 200
+    try:
+        beats = Beat.query.order_by(Beat.created_at.desc()).all()
+        current_user_id = get_jwt_identity() if request.headers.get('Authorization') else None
+        
+        beats_list = []
+        for beat in beats:
+            likes_count = Like.query.filter_by(beat_id=beat.id).count()
+            liked_by_user = False
+            if current_user_id:
+                liked_by_user = Like.query.filter_by(
+                    beat_id=beat.id,
+                    user_id=current_user_id
+                ).first() is not None
+                
+            beats_list.append({
+                'id': beat.id,
+                'title': beat.title,
+                'description': beat.description,
+                'audio_url': get_full_url(beat.audio_url),
+                'user_id': beat.user_id,
+                'username': beat.author.username,
+                'created_at': beat.created_at.isoformat(),
+                'likes_count': likes_count,
+                'liked_by_user': liked_by_user,
+                'author_photo': get_full_url(beat.author.profile_photo) if beat.author and beat.author.profile_photo else None
+            })
+        
+        return jsonify(beats_list), 200
+    except Exception as e:
+        print(f"Error fetching beats: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 # Comment routes
 @app.route('/api/beats/<int:beat_id>/comments', methods=['GET'])
 @jwt_required()
-@cross_origin()
+@cross_origin(supports_credentials=True)
 def get_beat_comments(beat_id):
     """Get all comments for a specific beat"""
     try:
@@ -91,7 +117,7 @@ def get_beat_comments(beat_id):
 
 @app.route('/api/beats/<int:beat_id>/comments', methods=['POST'])
 @jwt_required()
-@cross_origin()
+@cross_origin(supports_credentials=True)
 def add_beat_comment(beat_id):
     """Add a new comment to a beat"""
     try:
@@ -132,6 +158,7 @@ def add_beat_comment(beat_id):
 
 @app.route('/api/comments/<int:comment_id>', methods=['PUT'])
 @jwt_required()
+@cross_origin(supports_credentials=True)
 def update_comment(comment_id):
     """Update an existing comment"""
     try:
@@ -171,6 +198,7 @@ def update_comment(comment_id):
 
 @app.route('/api/comments/<int:comment_id>', methods=['DELETE'])
 @jwt_required()
+@cross_origin(supports_credentials=True)
 def delete_comment(comment_id):
     """Delete a comment"""
     try:
@@ -198,7 +226,7 @@ def delete_comment(comment_id):
 # Like routes
 @app.route('/api/beats/<int:beat_id>/like', methods=['POST'])
 @jwt_required()
-@cross_origin()
+@cross_origin(supports_credentials=True)
 def toggle_like(beat_id):
     user_id = get_jwt_identity()
     existing_like = Like.query.filter_by(user_id=user_id, beat_id=beat_id).first()

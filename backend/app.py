@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask import secure_filename
+from werkzeug.utils import secure_filename
 
 load_dotenv()
 
