@@ -134,10 +134,27 @@ const LandingPage: React.FC = () => {
         ) : (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, gap: 2, alignItems: 'center' }}>
             <GoogleLogin
-           text='continue_with' 
+              text='continue_with' 
               onSuccess={handleGoogleSuccess}
               onError={handleGoogleError}
             />
+            <Button
+              variant="outlined"
+              startIcon={<img src="https://github.com/favicon.ico" alt="GitHub" style={{ width: 16, height: 16 }} />}
+              onClick={() => window.open('https://github.com/shasha98sr/beatexchange', '_blank')}
+              sx={{
+                backgroundColor: theme.palette.grey[50],
+                color: 'black',
+                borderColor: theme.palette.divider,
+                borderRadius: 1,
+                '&:hover': {
+                  backgroundColor: theme.palette.grey[100],
+                  borderColor: '#fff',
+                }
+              }}
+            >
+              Star on GitHub
+            </Button>
           </Box>
         )}
       </Box>
