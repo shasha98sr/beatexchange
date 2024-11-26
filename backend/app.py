@@ -29,10 +29,11 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Configure CORS
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["*"],
+        "origins": ["http://localhost:3000", "https://spitbox.onrender.com"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True
+        "supports_credentials": True,
+        "expose_headers": ["Content-Type", "Authorization"]
     },
     r"/uploads/*": {
         "origins": ["*"],
@@ -181,18 +182,36 @@ def login():
 @cross_origin()
 def google_auth():
     try:
+        print("Received Google auth request")
         data = request.get_json()
-        token = data.get('credential')
+        print("Request data:", data)
         
+        token = data.get('credential')
         if not token:
+            print("No token provided in request")
             return jsonify({"error": "No token provided"}), 400
 
-        # Verify the token
-        idinfo = id_token.verify_oauth2_token(token, requests.Request(), GOOGLE_CLIENT_ID)
+        print(f"Received token: {token[:50]}...")
+        client_id = os.getenv('GOOGLE_CLIENT_ID')
+        print(f"Using GOOGLE_CLIENT_ID: {client_id}")
+
+        if not client_id:
+            print("GOOGLE_CLIENT_ID not set in environment")
+            return jsonify({"error": "Server configuration error"}), 500
+
+        try:
+            # Verify the token
+            idinfo = id_token.verify_oauth2_token(
+                token,
+                requests.Request(),
+                client_id,
+                clock_skew_in_seconds=10
+            )
+            print(f"Token verified successfully. User info: {idinfo.get('email')}")
+        except ValueError as ve:
+            print(f"Token verification failed: {str(ve)}")
+            return jsonify({"error": f"Token verification failed: {str(ve)}"}), 401
         
-        if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-            raise ValueError('Invalid issuer')
-            
         # Get user info from token
         email = idinfo['email']
         user = User.query.filter_by(email=email).first()
