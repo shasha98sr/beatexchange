@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask import secure_filename
 
 load_dotenv()
 
@@ -29,19 +30,28 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Configure CORS
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["http://localhost:3000", "https://spitbox.onrender.com"],
+        "origins": ["http://localhost:3000", "https://spitbox.onrender.com", "https://beatexchange.onrender.com"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"],
+        "allow_headers": ["Content-Type", "Authorization", "Admin-Secret"],
         "supports_credentials": True,
         "expose_headers": ["Content-Type", "Authorization"]
     },
     r"/uploads/*": {
-        "origins": ["*"],
+        "origins": "*",
         "methods": ["GET", "OPTIONS"],
         "allow_headers": ["Content-Type", "Range", "Accept-Ranges", "Content-Range"],
         "expose_headers": ["Content-Type", "Accept-Ranges", "Content-Range", "Content-Length"]
     }
-})
+}, supports_credentials=True)
+
+# Add CORS headers to all responses
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', 'https://spitbox.onrender.com')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,Admin-Secret')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 # Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///beatexchange.db')
@@ -322,27 +332,8 @@ def get_current_user():
         "profile_photo": user.profile_photo
     })
 
-# Add a protected endpoint to reset the database
-@app.route('/api/admin/reset-db', methods=['POST'])
-def admin_reset_db():
-    admin_secret = request.headers.get('Admin-Secret')
-    if not admin_secret or admin_secret != app.config['ADMIN_SECRET']:
-        return jsonify({"error": "Unauthorized"}), 401
-    
-    try:
-        reset_db()
-        return jsonify({"message": "Database reset successfully"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# Initialize database on startup
-with app.app_context():
-    try:
-        # Try to create tables if they don't exist
-        db.create_all()
-        print("Database initialized successfully")
-    except Exception as e:
-        print(f"Error during database initialization: {str(e)}")
+# Import routes after app and extensions are initialized
+from routes import *
 
 if __name__ == '__main__':
     app.run(debug=True)
