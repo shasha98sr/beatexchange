@@ -119,26 +119,26 @@ function AppContent() {
   return (
     <ThemeProvider theme={themeObj}>
       <CssBaseline />
-      <Router>
-        <Navbar onToggleTheme={toggleTheme} />
-        <Container maxWidth="lg">
-          <Box sx={{ mt: 4, pb: 4 }}>
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/feed" element={<BeatboxFeed />} />
-            </Routes>
-          </Box>
-        </Container>
-      </Router>
+      <Navbar onToggleTheme={toggleTheme} />
+      <Container maxWidth="lg">
+        <Box sx={{ mt: 4, pb: 4 }}>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/feed" element={<BeatboxFeed />} />
+          </Routes>
+        </Box>
+      </Container>
     </ThemeProvider>
   );
 };
 
 const App = () => {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <Router>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </Router>
   );
 };
 
