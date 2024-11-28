@@ -29,3 +29,4 @@ yarn-error.log*
 *.log
 backend/uploads/*
 backend/instance/beatexchange.db
+backend/spitbox-30877-firebase.json

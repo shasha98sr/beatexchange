@@ -74,8 +74,8 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
         setErrorWithDelay(null);
         setIsDestroyed(false);
         
-        // Append token to URL
-        const authenticatedUrl = `${audioUrl}${audioUrl.includes('?') ? '&' : '?'}token=${token}`;
+        // Use the Firebase URL directly without appending token
+        const audioUrlToUse = audioUrl;
 
         if (waveformRef.current && !wavesurfer.current) {
           const ws = WaveSurfer.create({
@@ -148,7 +148,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
           });
 
           try {
-            await ws.load(authenticatedUrl);
+            await ws.load(audioUrlToUse);
           } catch (error) {
             console.error('Error loading audio:', error);
             if (!isDestroyed) {

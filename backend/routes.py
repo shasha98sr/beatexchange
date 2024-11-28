@@ -5,6 +5,7 @@ from werkzeug.utils import secure_filename
 from app import app, db, User, Beat, Comment, Like
 from datetime import datetime
 import os
+from firestore import upload_file
 
 # Create uploads directory if it doesn't exist
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
@@ -15,6 +16,8 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def get_full_url(path):
     """Helper function to convert relative paths to full URLs"""
+    if path.startswith('https://'):  
+        return path
     if path.startswith('/uploads/'):
         return f"http://127.0.0.1:8000{path}"
     return path
@@ -31,16 +34,23 @@ def create_beat():
     if not audio_file.filename:
         return jsonify({"error": "No selected file"}), 400
     
-    # Save audio file
+    # Save audio file temporarily
     filename = secure_filename(f"{datetime.utcnow().timestamp()}_{audio_file.filename}")
-    audio_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    audio_file.save(audio_path)
+    temp_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    audio_file.save(temp_path)
     
-    relative_url = f"/uploads/{filename}"
+    # Upload to Firebase Storage
+    firebase_url = upload_file(temp_path, filename)
+    if not firebase_url:
+        return jsonify({"error": "Failed to upload file to storage"}), 500
+    
+    # Remove temporary file
+    os.remove(temp_path)
+    
     beat = Beat(
         title=request.form.get('title', 'Untitled Beat'),
         description=request.form.get('description', ''),
-        audio_url=relative_url,
+        audio_url=firebase_url,  
         user_id=get_jwt_identity()
     )
     db.session.add(beat)
@@ -52,7 +62,7 @@ def create_beat():
             "id": beat.id,
             "title": beat.title,
             "description": beat.description,
-            "audio_url": get_full_url(beat.audio_url)
+            "audio_url": beat.audio_url  
         }
     }), 201
 
