@@ -95,16 +95,18 @@ const Sidebar: React.FC<SidebarProps> = ({ onToggleTheme }) => {
         </ListItem>
 
         <ListItem disablePadding>
-          <ListItemButton
-            component={Link}
-            to="/profile"
-            sx={{ borderRadius: 28 }}
-          >
-            <ListItemIcon>
-              <PersonIcon />
-            </ListItemIcon>
-            <ListItemText primary="My Bars" />
-          </ListItemButton>
+          {user && (
+            <ListItemButton
+              component={Link}
+              to={`/@${user.username}`}
+              sx={{ borderRadius: 28 }}
+            >
+              <ListItemIcon>
+                <PersonIcon />
+              </ListItemIcon>
+              <ListItemText primary="My Bars" />
+            </ListItemButton>
+          )}
         </ListItem>
 
         {/* Post Button */}

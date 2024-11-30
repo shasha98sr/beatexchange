@@ -7,8 +7,9 @@ import {
   Box,
 } from '@mui/material';
 import BeatboxFeed from './components/BeatboxFeed';
-import RecordBeat from './components/RecordBeat';
+import RecordPage from './components/RecordPage';
 import LandingPage from './components/LandingPage';
+import Profile from './components/Profile';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import * as beatService from './services/api';
 import Navbar from './components/Navbar';
@@ -146,6 +147,8 @@ function AppContent() {
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/feed" element={<BeatboxFeed />} />
+              <Route path="/record" element={<RecordPage />} />
+              <Route path="/:username" element={<Profile />} />
             </Routes>
           </Box>
         </Box>

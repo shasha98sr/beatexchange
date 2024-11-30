@@ -81,6 +81,45 @@ def get_beats():
         'author_photo': get_full_url(beat.author.profile_photo) if beat.author and beat.author.profile_photo else None
     } for beat in beats]), 200
 
+@app.route('/api/users/<string:username>/beats', methods=['GET'])
+@cross_origin()
+def get_user_beats(username):
+    # Remove @ symbol if present
+    clean_username = username[1:] if username.startswith('@') else username
+    
+    user = User.query.filter_by(username=clean_username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+        
+    beats = Beat.query.filter_by(user_id=user.id).order_by(Beat.created_at.desc()).all()
+    return jsonify([{
+        'id': beat.id,
+        'title': beat.title,
+        'description': beat.description,
+        'audio_url': get_full_url(beat.audio_url),
+        'author': beat.author.username if beat.author else 'Unknown User',
+        'created_at': beat.created_at.isoformat(),
+        'likes_count': len(beat.likes),
+        'author_photo': get_full_url(beat.author.profile_photo) if beat.author and beat.author.profile_photo else None
+    } for beat in beats]), 200
+
+@app.route('/api/users/me/beats', methods=['GET'])
+@jwt_required()
+@cross_origin()
+def get_my_beats():
+    current_user_id = get_jwt_identity()
+    beats = Beat.query.filter_by(user_id=current_user_id).order_by(Beat.created_at.desc()).all()
+    return jsonify([{
+        'id': beat.id,
+        'title': beat.title,
+        'description': beat.description,
+        'audio_url': get_full_url(beat.audio_url),
+        'author': beat.author.username if beat.author else 'Unknown User',
+        'created_at': beat.created_at.isoformat(),
+        'likes_count': len(beat.likes),
+        'author_photo': get_full_url(beat.author.profile_photo) if beat.author and beat.author.profile_photo else None
+    } for beat in beats]), 200
+
 # Comment routes
 @app.route('/api/beats/<int:beat_id>/comments', methods=['GET'])
 @jwt_required()
