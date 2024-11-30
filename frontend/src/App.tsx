@@ -12,6 +12,7 @@ import LandingPage from './components/LandingPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import * as beatService from './services/api';
 import Navbar from './components/Navbar';
+import Sidebar from './components/Sidebar';
 import './App.css';
 
 function AppContent() {
@@ -119,13 +120,34 @@ function AppContent() {
   return (
     <ThemeProvider theme={themeObj}>
       <CssBaseline />
-      <Navbar onToggleTheme={toggleTheme} />
       <Container maxWidth="lg">
-        <Box sx={{ mt: 4, pb: 4 }}>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/feed" element={<BeatboxFeed />} />
-          </Routes>
+        <Box sx={{ 
+          display: 'flex',
+          minHeight: '100vh',
+          position: 'relative',
+        }}>
+          {/* Left Sidebar */}
+          <Box
+            sx={{
+              width: 275,
+              position: 'sticky',
+              top: 0,
+              height: '100vh',
+              borderRight: 1,
+              borderColor: 'divider',
+              display: { xs: 'none', md: 'block' },
+            }}
+          >
+            <Sidebar onToggleTheme={toggleTheme} />
+          </Box>
+
+          {/* Main Content */}
+          <Box sx={{ flex: 1, ml: { md: 2 }, mt: 4, pb: 4 }}>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/feed" element={<BeatboxFeed />} />
+            </Routes>
+          </Box>
         </Box>
       </Container>
     </ThemeProvider>

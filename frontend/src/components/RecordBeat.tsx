@@ -12,7 +12,7 @@ import {
   Typography,
   Alert,
 } from '@mui/material';
-import { Mic, Stop, PlayArrow, Pause, Close, Save } from '@mui/icons-material';
+import { Mic, Stop, PlayArrow, Pause, Close, Save, RestartAlt, MicNone } from '@mui/icons-material';
 import { beats } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '@mui/material/styles';
@@ -352,66 +352,126 @@ const RecordBeat: React.FC<RecordBeatProps> = ({ open, onClose, onUploadComplete
             bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
           }
         }}>
-          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            gap: 3,
+            mt: 2 
+          }}>
             {!recordedBlob ? (
               <IconButton
-                color={isRecording ? 'error' : 'primary'}
                 onClick={isRecording ? stopRecording : startRecording}
                 disabled={uploading}
-                sx={{ 
+                sx={{
                   width: 80,
                   height: 80,
-                  '& .MuiSvgIcon-root': {
-                    fontSize: 40
-                  }
+                  bgcolor: isRecording ? '#ff1744' : '#d50000',
+                  '&:hover': {
+                    bgcolor: isRecording ? '#d50000' : '#c62828',
+                  },
+                  transition: 'all 0.3s ease',
+                  boxShadow: isRecording ? '0 0 0 5px rgba(255, 23, 68, 0.3)' : 'none',
+                  '&.Mui-disabled': {
+                    bgcolor: '#bdbdbd',
+                  },
                 }}
               >
-                {isRecording ? <Stop /> : <Mic />}
+                {isRecording ? (
+                  <Stop sx={{ 
+                    fontSize: 40,
+                    color: '#fff',
+                  }} />
+                ) : (
+                  <Mic sx={{ 
+                    fontSize: 40,
+                    color: '#fff',
+                    animation: isRecording ? 'pulse 1.5s infinite' : 'none',
+                  }} />
+                )}
               </IconButton>
             ) : (
               <>
                 <IconButton
-                  color="primary"
                   onClick={togglePlayback}
                   disabled={uploading || isRecording}
                   sx={{ 
                     width: 80,
                     height: 80,
-                    '& .MuiSvgIcon-root': {
-                      fontSize: 40
-                    }
+                    bgcolor: theme.palette.primary.main,
+                    '&:hover': {
+                      bgcolor: theme.palette.primary.dark,
+                    },
+                    '&.Mui-disabled': {
+                      bgcolor: '#bdbdbd',
+                    },
                   }}
                 >
-                  {isPlaying ? <Pause /> : <PlayArrow />}
+                  {isPlaying ? (
+                    <Pause sx={{ fontSize: 40, color: '#fff' }} />
+                  ) : (
+                    <PlayArrow sx={{ fontSize: 40, color: '#fff' }} />
+                  )}
                 </IconButton>
-                <IconButton
-                  color="error"
-                  onClick={() => {
-                    setRecordedBlob(null);
-                    setIsPlaying(false);
-                    setRecordingTime(0);
-                    if (audioSource.current) {
-                      audioSource.current.stop();
-                      audioSource.current.disconnect();
-                    }
-                    if (timerInterval.current) {
-                      clearInterval(timerInterval.current);
-                    }
-                  }}
-                  disabled={uploading}
-                  sx={{ 
-                    width: 80,
-                    height: 80,
-                    '& .MuiSvgIcon-root': {
-                      fontSize: 40
-                    }
-                  }}
-                >
-                  <Close />
-                </IconButton>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <IconButton
+                    onClick={() => {
+                      setRecordedBlob(null);
+                      setIsPlaying(false);
+                      setRecordingTime(0);
+                      if (audioSource.current) {
+                        audioSource.current.stop();
+                        audioSource.current.disconnect();
+                      }
+                      if (timerInterval.current) {
+                        clearInterval(timerInterval.current);
+                      }
+                    }}
+                    disabled={uploading}
+                    sx={{ 
+                      width: 40,
+                      height: 40,
+                      bgcolor: 'transparent',
+                      border: 1,
+                      borderColor: theme.palette.error.main,
+                      color: theme.palette.error.main,
+                      '&:hover': {
+                        bgcolor: 'rgba(211, 47, 47, 0.04)',
+                      },
+                      '&.Mui-disabled': {
+                        bgcolor: '#bdbdbd',
+                      },
+                    }}
+                  >
+                    <RestartAlt sx={{ fontSize: 20 }} />
+                  </IconButton>
+                  <Typography 
+                    variant="caption" 
+                    color="error" 
+                    sx={{ mt: 0.5 }}
+                  >
+                    Reset
+                  </Typography>
+                </Box>
               </>
             )}
           </Box>
+
+          <style>
+            {`
+              @keyframes pulse {
+                0% {
+                  transform: scale(1);
+                }
+                50% {
+                  transform: scale(1.1);
+                }
+                100% {
+                  transform: scale(1);
+                }
+              }
+            `}
+          </style>
 
           <Typography align="center" variant="body2" color="textSecondary">
             {formatTime(recordingTime)}
@@ -443,10 +503,18 @@ const RecordBeat: React.FC<RecordBeatProps> = ({ open, onClose, onUploadComplete
         <Button
           onClick={handleSubmit}
           disabled={!recordedBlob || uploading}
-          startIcon={<Save />}
           variant="contained"
+          color="primary"
+          sx={{
+            bgcolor: theme.palette.primary.main,
+            color: '#fff',
+            borderRadius: 28,
+            '&:hover': {
+              bgcolor: theme.palette.primary.dark,
+            },
+          }}
         >
-          {uploading ? 'Uploading...' : 'Save'}
+          {uploading ? 'Posting...' : 'Post'}
         </Button>
       </DialogActions>
       {uploading && <LinearProgress />}
