@@ -140,22 +140,37 @@ const Sidebar: React.FC<SidebarProps> = ({ onToggleTheme }) => {
           sx={{
             display: 'flex',
             alignItems: 'center',
-            gap: 2,
+            gap: 1,
             p: 1,
-            borderRadius: 2,
+            borderRadius: 30,
             '&:hover': {
               bgcolor: 'action.hover',
             },
+            position: 'relative',
+            pr: 2,
           }}
         >
           <Avatar
             src={user?.profile_photo || undefined}
             alt={user?.username}
+            sx={{ width: 40, height: 40 }}
           >
             {user?.username?.[0]?.toUpperCase()}
           </Avatar>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="subtitle2" fontWeight="bold">
+          <Box sx={{ 
+            flex: 1,
+            minWidth: 0, 
+            mr: 1 
+          }}>
+            <Typography 
+              variant="subtitle2" 
+              fontWeight="bold"
+              sx={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
               {user?.username}
             </Typography>
           </Box>
@@ -163,8 +178,14 @@ const Sidebar: React.FC<SidebarProps> = ({ onToggleTheme }) => {
             size="small"
             onClick={handleMenuClick}
             aria-label="user menu"
+            sx={{
+              padding: 0.5,
+              '&:hover': {
+                bgcolor: 'action.hover',
+              }
+            }}
           >
-            <MoreIcon />
+            <MoreIcon fontSize="small" />
           </IconButton>
         </Box>
 
