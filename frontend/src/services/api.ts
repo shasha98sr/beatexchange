@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Beat, User, Comment } from '../types';
+import { Beat, User, Comment, PaginatedBeatsResponse } from '../types';
 
 const BASE_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
 const API_URL = `${BASE_URL}/api`;
@@ -71,9 +71,9 @@ export const auth = {
 };
 
 export const beats = {
-  getAll: async (): Promise<Beat[]> => {
+  getAll: async (page = 1, perPage = 10): Promise<PaginatedBeatsResponse> => {
     try {
-      const response = await api.get('/beats');
+      const response = await api.get(`/beats?page=${page}&per_page=${perPage}`);
       return response.data;
     } catch (error) {
       console.error('API error getting all beats:', error);

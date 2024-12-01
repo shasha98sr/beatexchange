@@ -1,12 +1,13 @@
 export interface Beat {
   id: number;
   title: string;
+  description: string;
   audio_url: string;
   author: string;
-  author_photo: string | null;
   created_at: string;
   likes_count: number;
   liked_by_user: boolean;
+  author_photo?: string;
 }
 
 export interface User {
@@ -24,4 +25,11 @@ export interface Comment {
   username: string;
   created_at: string;
   user_photo: string | null;
+}
+
+export interface PaginatedBeatsResponse {
+  beats: Beat[];
+  total: number;
+  pages: number;
+  current_page: number;
 }

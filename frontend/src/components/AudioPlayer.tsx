@@ -11,6 +11,8 @@ interface AudioPlayerProps {
   title: string;
   username: string;
   profilePicture?: string | null;
+  comments: Comment[];
+  onCommentAdd?: (beatId: number, comment: any) => void;
 }
 
 interface Comment {
@@ -21,7 +23,15 @@ interface Comment {
   created_at: string;
 }
 
-const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, username, profilePicture }) => {
+const AudioPlayer: React.FC<AudioPlayerProps> = ({
+  audioUrl,
+  beatId,
+  title,
+  username,
+  profilePicture,
+  comments: initialComments,
+  onCommentAdd
+}) => {
   const { token } = useAuth();
   const theme = useTheme();
   const waveformRef = useRef<HTMLDivElement>(null);
@@ -31,7 +41,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [comments, setComments] = useState<Comment[]>(initialComments);
   const [newComment, setNewComment] = useState('');
   const [isDestroyed, setIsDestroyed] = useState(false);
   const [hasPlayed, setHasPlayed] = useState(false);
@@ -181,6 +191,10 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
     };
   }, [audioUrl, comments, isDestroyed, token, setErrorWithDelay]);
 
+  useEffect(() => {
+    setComments(initialComments);
+  }, [initialComments]);
+
   const handlePlayPause = () => {
     if (!wavesurfer.current) return;
     
@@ -268,30 +282,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
     updateCommentMarkers();
   }, [comments, updateCommentMarkers]);
 
-  const fetchComments = useCallback(async () => {
-    try {
-      if (!token) {
-        console.error('No auth token found');
-        return;
-      }
-
-      const data = await beats.getComments(beatId);
-      setComments(data.map((comment: any) => ({
-        id: comment.id,
-        text: comment.content,
-        timestamp: comment.timestamp,
-        username: comment.username,
-        created_at: comment.created_at
-      })));
-    } catch (error) {
-      console.error('Error fetching comments:', error);
-    }
-  }, [beatId, token]);
-
-  useEffect(() => {
-    fetchComments();
-  }, [fetchComments]);
-
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
 
@@ -301,14 +291,18 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
         return;
       }
 
-      const newCommentData = await beats.addComment(beatId, newComment, currentTime);
-      setComments(prevComments => [...prevComments, {
-        id: newCommentData.id,
-        text: newCommentData.content,
-        timestamp: newCommentData.timestamp,
-        username: newCommentData.username,
-        created_at: newCommentData.created_at
-      }]);
+      const response = await beats.addComment(beatId, newComment, currentTime);
+
+      const newCommentObj = {
+        id: response.id,
+        text: response.content,
+        timestamp: response.timestamp,
+        username: response.username,
+        created_at: response.created_at
+      };
+
+      setComments(prev => [...prev, newCommentObj]);
+      onCommentAdd?.(beatId, newCommentObj);
       setNewComment('');
     } catch (error) {
       console.error('Error adding comment:', error);

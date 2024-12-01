@@ -18,6 +18,7 @@ const Profile: React.FC = () => {
   const { username } = useParams<{ username: string }>();
   const { user } = useAuth();
   const [userBeats, setUserBeats] = useState<Beat[]>([]);
+  const [commentsMap, setCommentsMap] = useState<Record<number, any[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profileUser, setProfileUser] = useState<{ username: string; profile_photo?: string | null } | null>(null);
@@ -34,8 +35,15 @@ const Profile: React.FC = () => {
     }
   };
 
+  const handleCommentAdd = (beatId: number, newComment: any) => {
+    setCommentsMap(prev => ({
+      ...prev,
+      [beatId]: [...(prev[beatId] || []), newComment]
+    }));
+  };
+
   useEffect(() => {
-    const fetchUserBeats = async () => {
+    const fetchUserBeatsAndComments = async () => {
       if (!username) {
         setError('User not found');
         setLoading(false);
@@ -49,6 +57,22 @@ const Profile: React.FC = () => {
         const response = await beatsService.getUserBeats(username);
         console.log('API Response:', response);
         setUserBeats(response);
+        
+        // Fetch comments for all beats
+        const commentsData: Record<number, any[]> = {};
+        await Promise.all(
+          response.map(async (beat) => {
+            const comments = await beatsService.getComments(beat.id);
+            commentsData[beat.id] = comments.map((comment: any) => ({
+              id: comment.id,
+              text: comment.content,
+              timestamp: comment.timestamp,
+              username: comment.username,
+              created_at: comment.created_at
+            }));
+          })
+        );
+        setCommentsMap(commentsData);
         
         // Set profile user info
         const cleanUsername = username.startsWith('@') ? username.slice(1) : username;
@@ -66,7 +90,7 @@ const Profile: React.FC = () => {
       }
     };
 
-    fetchUserBeats();
+    fetchUserBeatsAndComments();
   }, [username]);
 
   if (!username) {
@@ -118,7 +142,13 @@ const Profile: React.FC = () => {
         {userBeats.length > 0 ? (
           <Box>
             {userBeats.map((beat) => (
-              <BeatCard key={beat.id} beat={beat} onLike={() => handleLike(beat.id)} />
+              <BeatCard 
+                key={beat.id} 
+                beat={beat} 
+                comments={commentsMap[beat.id] || []}
+                onLike={() => handleLike(beat.id)}
+                onCommentAdd={handleCommentAdd}
+              />
             ))}
           </Box>
         ) : (

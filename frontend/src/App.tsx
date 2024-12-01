@@ -144,7 +144,7 @@ function AppContent() {
           )}
 
           {/* Main Content */}
-          <Box sx={{ flex: 1, ml: isAuthenticated ? { md: 2 } : 0, mt: 4, pb: 4 }}>
+          <Box sx={{ flex: 1, mt: 4, pb: 4 }}>
             <Routes>
               {!isAuthenticated ? (
                 <Route path="*" element={<LandingPage />} />

@@ -69,17 +69,43 @@ def create_beat():
 @app.route('/api/beats', methods=['GET'])
 @cross_origin()
 def get_beats():
-    beats = Beat.query.order_by(Beat.created_at.desc()).all()
-    return jsonify([{
-        'id': beat.id,
-        'title': beat.title,
-        'description': beat.description,
-        'audio_url': get_full_url(beat.audio_url),
-        'author': beat.author.username if beat.author else 'Unknown User',
-        'created_at': beat.created_at.isoformat(),
-        'likes_count': len(beat.likes),
-        'author_photo': get_full_url(beat.author.profile_photo) if beat.author and beat.author.profile_photo else None
-    } for beat in beats]), 200
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    
+    # Build the base query with proper join conditions
+    query = db.session.query(
+        Beat.id,
+        Beat.title,
+        Beat.description,
+        Beat.audio_url,
+        Beat.created_at,
+        User.username.label('author'),
+        User.profile_photo.label('author_photo'),
+        db.func.count(Like.id).label('likes_count')
+    ).select_from(Beat)\
+    .join(User, Beat.user_id == User.id)\
+    .outerjoin(Like, Beat.id == Like.beat_id)\
+    .group_by(Beat.id, User.username, User.profile_photo)\
+    .order_by(Beat.created_at.desc())
+    
+    # Get paginated results
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    return jsonify({
+        'beats': [{
+            'id': beat.id,
+            'title': beat.title,
+            'description': beat.description,
+            'audio_url': get_full_url(beat.audio_url),
+            'author': beat.author,
+            'created_at': beat.created_at.isoformat(),
+            'likes_count': beat.likes_count,
+            'author_photo': get_full_url(beat.author_photo) if beat.author_photo else None
+        } for beat in pagination.items],
+        'total': pagination.total,
+        'pages': pagination.pages,
+        'current_page': pagination.page
+    }), 200
 
 @app.route('/api/users/<string:username>/beats', methods=['GET'])
 @cross_origin()
