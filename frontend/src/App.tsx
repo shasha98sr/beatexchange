@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import {
@@ -12,7 +12,6 @@ import LandingPage from './components/LandingPage';
 import Profile from './components/Profile';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import * as beatService from './services/api';
-import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import './App.css';
 
@@ -128,27 +127,35 @@ function AppContent() {
           position: 'relative',
         }}>
           {/* Left Sidebar */}
-          <Box
-            sx={{
-              width: 275,
-              position: 'sticky',
-              top: 0,
-              height: '100vh',
-              borderRight: 1,
-              borderColor: 'divider',
-              display: { xs: 'none', md: 'block' },
-            }}
-          >
-            <Sidebar onToggleTheme={toggleTheme} />
-          </Box>
+          {isAuthenticated && (
+            <Box
+              sx={{
+                width: 275,
+                position: 'sticky',
+                top: 0,
+                height: '100vh',
+                borderRight: 1,
+                borderColor: 'divider',
+                display: { xs: 'none', md: 'block' },
+              }}
+            >
+              <Sidebar onToggleTheme={toggleTheme} />
+            </Box>
+          )}
 
           {/* Main Content */}
-          <Box sx={{ flex: 1, ml: { md: 2 }, mt: 4, pb: 4 }}>
+          <Box sx={{ flex: 1, ml: isAuthenticated ? { md: 2 } : 0, mt: 4, pb: 4 }}>
             <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/feed" element={<BeatboxFeed />} />
-              <Route path="/record" element={<RecordPage />} />
-              <Route path="/:username" element={<Profile />} />
+              {!isAuthenticated ? (
+                <Route path="*" element={<LandingPage />} />
+              ) : (
+                <>
+                  <Route path="/" element={<BeatboxFeed />} />
+                  <Route path="/feed" element={<BeatboxFeed />} />
+                  <Route path="/record" element={<RecordPage />} />
+                  <Route path="/:username" element={<Profile />} />
+                </>
+              )}
             </Routes>
           </Box>
         </Box>

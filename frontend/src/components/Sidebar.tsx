@@ -72,7 +72,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onToggleTheme }) => {
           sx={{
             fontWeight: 'bold',
             textDecoration: 'none',
-            color: theme.palette.primary.main,
+            color: theme.palette.text.primary,
           }}
         >
           Spit.box

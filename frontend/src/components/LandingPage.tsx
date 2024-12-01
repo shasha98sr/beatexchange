@@ -131,12 +131,17 @@ const LandingPage: React.FC = () => {
             Go to Feed
           </Button>
         ) : (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, gap: 2, alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, gap: 2, alignItems: 'center', flexDirection: 'column' }}>
             <GoogleLogin
-           text='continue_with' 
+              text='continue_with' 
               onSuccess={handleGoogleSuccess}
               onError={handleGoogleError}
             />
+            {error && (
+              <Typography color="error" sx={{ mt: 2 }}>
+                {error}
+              </Typography>
+            )}
           </Box>
         )}
       </Box>
