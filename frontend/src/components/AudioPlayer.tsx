@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import { Box, IconButton, Typography, TextField, Button, Stack, Alert, useTheme, Avatar } from '@mui/material';
+import { Box, IconButton, Typography, TextField, Button, Stack, Alert, useTheme, Avatar, CircularProgress } from '@mui/material';
 import { PlayArrow, Pause, Comment, Send } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { beats } from '../services/api';
@@ -326,24 +326,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
           {error}
         </Alert>
       )}
-      {isLoading && (
-        <Box sx={{ 
-          position: 'absolute', 
-          top: 0, 
-          left: 0, 
-          right: 0, 
-          bottom: 0, 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          bgcolor: 'rgba(255, 255, 255, 0.1)',
-          zIndex: 1
-        }}>
-          <Typography variant="body2" color="text.secondary">
-            Loading audio...
-          </Typography>
-        </Box>
-      )}
       <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%', justifyContent: 'space-between' }}>
         <Stack direction="row" spacing={2} alignItems="center">
           <Avatar 
@@ -374,14 +356,32 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', marginY: 2 }}>
         <IconButton 
           onClick={handlePlayPause} 
+          disabled={isLoading}
           sx={{
             color: theme.palette.primary.main,
             borderRadius: '50%',
             border: '1px solid',
             borderColor: theme.palette.primary.main,
+            position: 'relative',
+            '&.Mui-disabled': {
+              borderColor: theme.palette.primary.main,
+              color: theme.palette.primary.main,
+            }
           }}
         >
-          {isPlaying ? <Pause /> : <PlayArrow />}
+          {isLoading ? (
+            <CircularProgress
+              size={24}
+              sx={{
+                color: theme.palette.primary.main,
+                position: 'absolute',
+              }}
+            />
+          ) : isPlaying ? (
+            <Pause />
+          ) : (
+            <PlayArrow />
+          )}
         </IconButton>
         
         <Box sx={{ position: 'relative', width: '100%' }}>

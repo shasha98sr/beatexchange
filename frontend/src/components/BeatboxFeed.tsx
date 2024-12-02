@@ -43,32 +43,30 @@ const BeatboxFeed: React.FC = () => {
       setHasMore(pageNum < response.pages);
       setPage(pageNum);
 
-      // Fetch comments for new beats
-      const newBeatsComments = response.beats.filter(beat => !commentsMap[beat.id]);
-      if (newBeatsComments.length > 0) {
-        const comments = await Promise.all(
-          newBeatsComments.map(beat => beatsService.getComments(beat.id))
-        );
-        
-        const newCommentsMap = { ...commentsMap };
-        newBeatsComments.forEach((beat, index) => {
-          newCommentsMap[beat.id] = comments[index].map(comment => ({
-            id: comment.id,
-            text: comment.content,
-            timestamp: comment.timestamp,
-            username: comment.username,
-            created_at: comment.created_at
-          }));
+      // Update comments map with the comments from the response
+      setCommentsMap(prevMap => {
+        const newMap = { ...prevMap };
+        response.beats.forEach(beat => {
+          if (!newMap[beat.id]) {
+            newMap[beat.id] = beat.comments.map(comment => ({
+              id: comment.id,
+              text: comment.content, // Keep text for backward compatibility
+              content: comment.content,
+              timestamp: comment.timestamp,
+              username: comment.username,
+              created_at: comment.created_at
+            }));
+          }
         });
-        setCommentsMap(newCommentsMap);
-      }
+        return newMap;
+      });
     } catch (error) {
       console.error('Error fetching beats:', error);
       setError('Failed to load content. Please try again later.');
     } finally {
       setLoading(false);
     }
-  }, [commentsMap]);
+  }, []);
 
   const loadMore = useCallback(() => {
     if (!loading && hasMore) {
@@ -101,7 +99,8 @@ const BeatboxFeed: React.FC = () => {
 
   useEffect(() => {
     fetchBeats(1);
-  }, [fetchBeats]);
+    console.log('Beats fetched my print');
+  }, []);
 
   if (!beats.length && loading) {
     return (
@@ -112,7 +111,7 @@ const BeatboxFeed: React.FC = () => {
   }
 
   return (
-    <Box sx={{ width: '100%', maxWidth: '800px', marginX: 'auto' }}>
+    <Box sx={{ width: '100%', maxWidth: '800px', ml: 0, mr: 'auto' }}>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
@@ -140,27 +139,6 @@ const BeatboxFeed: React.FC = () => {
           />
         ))}
       </InfiniteScroll>
-
-      {isAuthenticated && (
-        <Fab
-          color="primary"
-          aria-label="record"
-          onClick={() => setShowRecordDialog(true)}
-          sx={{
-            position: 'fixed',
-            bottom: 24,
-            right: 24,
-          }}
-        >
-          <MicIcon />
-        </Fab>
-      )}
-
-      <RecordBeat
-        open={showRecordDialog}
-        onClose={() => setShowRecordDialog(false)}
-        onUploadComplete={() => fetchBeats(1)}
-      />
     </Box>
   );
 };

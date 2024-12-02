@@ -6,8 +6,10 @@ export interface Beat {
   author: string;
   created_at: string;
   likes_count: number;
+  comments_count: number;
   liked_by_user: boolean;
   author_photo?: string;
+  comments: Comment[];
 }
 
 export interface User {
@@ -20,11 +22,10 @@ export interface User {
 export interface Comment {
   id: number;
   content: string;
-  text: string;
   timestamp: number;
   username: string;
   created_at: string;
-  user_photo: string | null;
+  user_photo?: string | null;
 }
 
 export interface PaginatedBeatsResponse {

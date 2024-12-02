@@ -6,6 +6,7 @@ from app import app, db, User, Beat, Comment, Like
 from datetime import datetime
 import os
 from firestore import upload_file
+from sqlalchemy import distinct
 
 # Create uploads directory if it doesn't exist
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
@@ -81,18 +82,27 @@ def get_beats():
         Beat.created_at,
         User.username.label('author'),
         User.profile_photo.label('author_photo'),
-        db.func.count(Like.id).label('likes_count')
+        db.func.count(distinct(Like.id)).label('likes_count'),
+        db.func.count(distinct(Comment.id)).label('comments_count')
     ).select_from(Beat)\
     .join(User, Beat.user_id == User.id)\
     .outerjoin(Like, Beat.id == Like.beat_id)\
+    .outerjoin(Comment, Beat.id == Comment.beat_id)\
     .group_by(Beat.id, User.username, User.profile_photo)\
     .order_by(Beat.created_at.desc())
     
     # Get paginated results
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    
-    return jsonify({
-        'beats': [{
+
+    # Get beats with their comments
+    beats_with_details = []
+    for beat in pagination.items:
+        comments = Comment.query.filter_by(beat_id=beat.id)\
+            .order_by(Comment.timestamp)\
+            .limit(3)\
+            .all()
+            
+        beat_data = {
             'id': beat.id,
             'title': beat.title,
             'description': beat.description,
@@ -100,8 +110,20 @@ def get_beats():
             'author': beat.author,
             'created_at': beat.created_at.isoformat(),
             'likes_count': beat.likes_count,
-            'author_photo': get_full_url(beat.author_photo) if beat.author_photo else None
-        } for beat in pagination.items],
+            'comments_count': beat.comments_count,
+            'author_photo': get_full_url(beat.author_photo) if beat.author_photo else None,
+            'comments': [{
+                'id': comment.id,
+                'content': comment.content,
+                'timestamp': comment.timestamp,
+                'username': User.query.get(comment.user_id).username,
+                'created_at': comment.created_at.isoformat()
+            } for comment in comments]
+        }
+        beats_with_details.append(beat_data)
+    
+    return jsonify({
+        'beats': beats_with_details,
         'total': pagination.total,
         'pages': pagination.pages,
         'current_page': pagination.page
