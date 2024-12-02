@@ -17,10 +17,11 @@ const LandingPage: React.FC = () => {
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
     try {
+      console.log('Google response:', credentialResponse);
       await googleLogin(credentialResponse);
       navigate('/feed');
     } catch (error) {
-      setError('Google sign-in failed');
+      console.error('Google sign-in error:', error);
     }
   };
   
@@ -131,18 +132,39 @@ const LandingPage: React.FC = () => {
             Go to Feed
           </Button>
         ) : (
+          <>
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, gap: 2, alignItems: 'center', flexDirection: 'column' }}>
             <GoogleLogin
               text='continue_with' 
               onSuccess={handleGoogleSuccess}
               onError={handleGoogleError}
             />
-            {error && (
+ 
+            <Button
+              variant="outlined"
+              startIcon={<img src="https://github.com/favicon.ico" alt="GitHub" style={{ width: 16, height: 16 }} />}
+              onClick={() => window.open('https://github.com/shasha98sr/beatexchange', '_blank')}
+              sx={{
+                backgroundColor: theme.palette.grey[50],
+                color: 'black',
+                borderColor: theme.palette.divider,
+                borderRadius: 1,
+                '&:hover': {
+                  backgroundColor: theme.palette.grey[100],
+                  borderColor: '#fff',
+                }
+              }}
+            >
+              Star on GitHub
+            </Button>
+          </Box>
+            
+           {error && (
               <Typography color="error" sx={{ mt: 2 }}>
                 {error}
               </Typography>
             )}
-          </Box>
+            </>
         )}
       </Box>
     </Box>

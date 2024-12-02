@@ -81,14 +81,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const googleLogin = async (credentialResponse: CredentialResponse) => {
     try {
+      console.log('Attempting Google login with credential:', credentialResponse);
       if (!credentialResponse.credential) {
-        throw new Error('No credentials received from Google');
+        throw new Error('No credential received from Google');
       }
       const response = await auth.googleLogin(credentialResponse.credential);
+      console.log('Google login response:', response);
       setToken(response.token);
       setUser(response.user);
+      localStorage.setItem('user', JSON.stringify(response.user));
     } catch (error) {
-      console.error('Google login failed:', error);
+      console.error('Error in Google login:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+      }
       throw error;
     }
   };

@@ -29,10 +29,11 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Configure CORS
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["*"],
+        "origins": ["http://localhost:3000", "https://spitbox.onrender.com"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True
+        "supports_credentials": True,
+        "expose_headers": ["Content-Type", "Authorization"]
     },
     r"/uploads/*": {
         "origins": ["*"],
@@ -47,15 +48,52 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///bea
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'dev-key-change-in-production')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1)
+app.config['ADMIN_SECRET'] = os.getenv('ADMIN_SECRET', 'your-admin-secret')  # Add this to your Render env variables
+
+# Enable SQLAlchemy logging
+import logging
+logging.basicConfig()
+logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+
+# Initialize extensions
+db = SQLAlchemy(app)
+jwt = JWTManager(app)
 
 # Google OAuth configuration
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 if not GOOGLE_CLIENT_ID:
     raise ValueError("GOOGLE_CLIENT_ID environment variable is not set")
 
-# Initialize extensions
-db = SQLAlchemy(app)
-jwt = JWTManager(app)
+def init_db():
+    print("Initializing database...")
+    try:
+        # Create database directory if it doesn't exist
+        db_path = os.path.dirname(app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', ''))
+        if not os.path.exists(db_path) and db_path:
+            print(f"Creating database directory: {db_path}")
+            os.makedirs(db_path)
+
+        # Create all tables
+        with app.app_context():
+            print("Creating database tables...")
+            db.create_all()
+            print("Database tables created successfully")
+    except Exception as e:
+        print(f"Error initializing database: {str(e)}")
+        raise
+
+def reset_db():
+    print("Resetting database...")
+    try:
+        with app.app_context():
+            print("Dropping all tables...")
+            db.drop_all()
+            print("Creating new tables...")
+            db.create_all()
+            print("Database reset successfully")
+    except Exception as e:
+        print(f"Error resetting database: {str(e)}")
+        raise
 
 # Models
 class User(db.Model):
@@ -63,7 +101,7 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
-    profile_photo = db.Column(db.String(500))
+    profile_photo = db.Column(db.String(500), nullable=True, default=None)  # Made nullable
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     beats = db.relationship('Beat', backref='author', lazy=True)
 
@@ -100,37 +138,9 @@ def hello_world():
 @app.route('/uploads/<path:filename>')
 def serve_audio(filename):
     try:
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        if not os.path.exists(file_path):
-            app.logger.error(f"File not found: {file_path}")
-            return jsonify({"error": "File not found"}), 404
-
-        # Get the file's MIME type
-        mime_type, _ = mimetypes.guess_type(filename)
-        if not mime_type:
-            mime_type = 'application/octet-stream'
-
-        response = send_from_directory(
-            app.config['UPLOAD_FOLDER'],
-            filename,
-            mimetype=mime_type,
-            as_attachment=False,
-            conditional=True  # Enable conditional responses
-        )
-
-        # Add necessary headers for audio streaming
-        response.headers['Accept-Ranges'] = 'bytes'
-        response.headers['Cache-Control'] = 'no-cache'
-        response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
-        response.headers['Access-Control-Allow-Headers'] = 'Range'
-        response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
-
-        app.logger.info(f"Serving audio file: {filename} with MIME type: {mime_type}")
-        return response
-
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
     except Exception as e:
-        app.logger.error(f"Error serving audio file {filename}: {str(e)}")
-        return jsonify({"error": "Error serving file"}), 500
+        return jsonify({"error": str(e)}), 404
 
 # Route to clear database (WARNING: This will delete all data!)
 @app.route('/api/clear-db', methods=['POST'])
@@ -138,42 +148,50 @@ def clear_database():
     try:
         db.drop_all()
         db.create_all()
-        return jsonify({"message": "Database cleared successfully"}), 200
+        return jsonify({"message": "Database cleared successfully"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 # Auth routes
 @app.route('/api/auth/register', methods=['POST'])
-@cross_origin()
 def register():
     data = request.get_json()
     
+    if not all(k in data for k in ["username", "email", "password"]):
+        return jsonify({"error": "Missing required fields"}), 400
+    
+    if User.query.filter_by(username=data['username']).first():
+        return jsonify({"error": "Username already exists"}), 400
+    
     if User.query.filter_by(email=data['email']).first():
         return jsonify({"error": "Email already registered"}), 400
-        
-    if User.query.filter_by(username=data['username']).first():
-        return jsonify({"error": "Username already taken"}), 400
     
     user = User(
         username=data['username'],
         email=data['email'],
         password_hash=generate_password_hash(data['password'])
     )
+    
     db.session.add(user)
     db.session.commit()
     
     access_token = create_access_token(identity=user.id)
-    return jsonify({"token": access_token, "user": {"username": user.username}}), 201
+    return jsonify({
+        "token": access_token,
+        "user": {"username": user.username, "email": user.email}
+    })
 
 @app.route('/api/auth/login', methods=['POST'])
-@cross_origin()
 def login():
     data = request.get_json()
-    user = User.query.filter_by(email=data['email']).first()
+    user = User.query.filter_by(email=data.get('email')).first()
     
-    if user and check_password_hash(user.password_hash, data['password']):
+    if user and check_password_hash(user.password_hash, data.get('password')):
         access_token = create_access_token(identity=user.id)
-        return jsonify({"token": access_token, "user": {"username": user.username}}), 200
+        return jsonify({
+            "token": access_token,
+            "user": {"username": user.username, "email": user.email}
+        })
     
     return jsonify({"error": "Invalid credentials"}), 401
 
@@ -181,64 +199,114 @@ def login():
 @cross_origin()
 def google_auth():
     try:
+        print("Received Google auth request")
         data = request.get_json()
-        token = data.get('credential')
+        print("Request data:", data)
         
+        token = data.get('credential')
         if not token:
+            print("No token provided in request")
             return jsonify({"error": "No token provided"}), 400
 
-        # Verify the token
-        idinfo = id_token.verify_oauth2_token(token, requests.Request(), GOOGLE_CLIENT_ID)
-        
-        if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-            raise ValueError('Invalid issuer')
-            
-        # Get user info from token
-        email = idinfo['email']
-        user = User.query.filter_by(email=email).first()
-        
-        if not user:
-            # Create new user if doesn't exist
-            username = email.split('@')[0]
-            base_username = username
-            counter = 1
-            
-            # Handle username conflicts
-            while User.query.filter_by(username=username).first():
-                username = f"{base_username}{counter}"
-                counter += 1
-            
-            user = User(
-                username=username,
-                email=email,
-                password_hash=None,  # Google authenticated users don't need a password
-                profile_photo=idinfo.get('picture')  # Get profile photo URL from Google
+        print(f"Received token: {token[:50]}...")
+        client_id = os.getenv('GOOGLE_CLIENT_ID')
+        print(f"Using GOOGLE_CLIENT_ID: {client_id}")
+
+        if not client_id:
+            print("GOOGLE_CLIENT_ID not set in environment")
+            return jsonify({"error": "Server configuration error"}), 500
+
+        try:
+            # Verify the token
+            idinfo = id_token.verify_oauth2_token(
+                token,
+                requests.Request(),
+                client_id,
+                clock_skew_in_seconds=10
             )
-            db.session.add(user)
-            db.session.commit()
-        else:
-            # Update existing user's profile photo if it has changed
-            profile_photo = idinfo.get('picture')
-            if profile_photo and user.profile_photo != profile_photo:
-                user.profile_photo = profile_photo
-                db.session.commit()
+            print(f"Token verified successfully. User info: {idinfo.get('email')}")
+        except ValueError as ve:
+            print(f"Token verification failed: {str(ve)}")
+            return jsonify({"error": f"Token verification failed: {str(ve)}"}), 401
         
-        # Create access token
-        access_token = create_access_token(identity=user.id)
-        response_data = {
-            "token": access_token,
-            "user": {
-                "username": user.username,
-                "email": user.email,
-                "profile_photo": user.profile_photo
-            }
-        }
-        
-        return jsonify(response_data)
-        
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 401
+        try:
+            # Get user info from token
+            email = idinfo['email']
+            print(f"Looking up user with email: {email}")
+            
+            try:
+                user = User.query.filter_by(email=email).first()
+                print(f"Database query for user completed: {'Found' if user else 'Not found'}")
+            except Exception as db_e:
+                print(f"Error querying database: {str(db_e)}")
+                return jsonify({"error": f"Database query failed: {str(db_e)}"}), 500
+            
+            if not user:
+                print(f"Creating new user for email: {email}")
+                try:
+                    # Create new user if doesn't exist
+                    username = email.split('@')[0]
+                    base_username = username
+                    counter = 1
+                    
+                    # Handle username conflicts
+                    while User.query.filter_by(username=username).first():
+                        username = f"{base_username}{counter}"
+                        counter += 1
+                    
+                    user = User(
+                        username=username,
+                        email=email,
+                        password_hash=None,  # Google authenticated users don't need a password
+                        profile_photo=idinfo.get('picture')  # Get profile photo URL from Google
+                    )
+                    print(f"Attempting to add new user to database: {username}")
+                    db.session.add(user)
+                    db.session.commit()
+                    print(f"Successfully created new user: {username}")
+                except Exception as create_e:
+                    print(f"Error creating new user: {str(create_e)}")
+                    db.session.rollback()
+                    return jsonify({"error": f"Failed to create user: {str(create_e)}"}), 500
+            else:
+                print(f"Found existing user: {user.username}")
+                try:
+                    # Update existing user's profile photo if it has changed
+                    profile_photo = idinfo.get('picture')
+                    if profile_photo and user.profile_photo != profile_photo:
+                        user.profile_photo = profile_photo
+                        db.session.commit()
+                        print("Updated user's profile photo")
+                except Exception as update_e:
+                    print(f"Error updating user profile: {str(update_e)}")
+                    db.session.rollback()
+                    return jsonify({"error": f"Failed to update user: {str(update_e)}"}), 500
+            
+            try:
+                # Create access token
+                print(f"Creating access token for user: {user.username}")
+                access_token = create_access_token(identity=user.id)
+                response_data = {
+                    "token": access_token,
+                    "user": {
+                        "username": user.username,
+                        "email": user.email,
+                        "profile_photo": user.profile_photo
+                    }
+                }
+                print("Successfully created response data")
+                return jsonify(response_data)
+            except Exception as token_e:
+                print(f"Error creating access token: {str(token_e)}")
+                return jsonify({"error": f"Failed to create access token: {str(token_e)}"}), 500
+            
+        except Exception as e:
+            print(f"Database operation failed: {str(e)}")
+            db.session.rollback()
+            return jsonify({"error": f"Database operation failed: {str(e)}"}), 500
+            
     except Exception as e:
+        print(f"Unexpected error in google_auth: {str(e)}")
         return jsonify({"error": "Authentication failed"}), 401
 
 @app.route('/api/auth/me', methods=['GET'])
@@ -248,17 +316,36 @@ def get_current_user():
     user = User.query.get(current_user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
-        
     return jsonify({
         "username": user.username,
         "email": user.email,
         "profile_photo": user.profile_photo
-    }), 200
+    })
 
-# Import routes after app and extensions are initialized
-from routes import *
+# Add a protected endpoint to reset the database
+@app.route('/api/admin/reset-db', methods=['POST'])
+def admin_reset_db():
+    admin_secret = request.headers.get('Admin-Secret')
+    if not admin_secret or admin_secret != app.config['ADMIN_SECRET']:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        reset_db()
+        return jsonify({"message": "Database reset successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Initialize database on startup
+with app.app_context():
+    try:
+        # Try to create tables if they don't exist
+        db.create_all()
+        print("Database initialized successfully")
+    except Exception as e:
+        print(f"Error during database initialization: {str(e)}")
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)
+else:
+    # Initialize database when running in production
+    init_db()
