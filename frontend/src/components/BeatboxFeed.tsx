@@ -5,27 +5,22 @@ import {
   CircularProgress,
   Alert,
 } from '@mui/material';
-import {
-  Mic as MicIcon,
-} from '@mui/icons-material';
 import InfiniteScroll from 'react-infinite-scroll-component';
-import RecordBeat from './RecordBeat';
 import BeatCard from './BeatCard';
 import { beats as beatsService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Beat } from '../types';
 
 const BeatboxFeed: React.FC = () => {
-  const { isAuthenticated } = useAuth();
   const [beats, setBeats] = useState<Beat[]>([]);
   const [commentsMap, setCommentsMap] = useState<Record<number, any[]>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showRecordDialog, setShowRecordDialog] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
   const fetchBeats = useCallback(async (pageNum: number) => {
+    if (loading) return;
     try {
       setLoading(true);
       const response = await beatsService.getAll(pageNum, 6);

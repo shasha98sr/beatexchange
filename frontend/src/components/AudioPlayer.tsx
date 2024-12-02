@@ -96,7 +96,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
             cursorWidth: 1,
             barWidth: 3,
             barGap: 0.5,
-            height: 50,
+            height: 100,
             normalize: true,
             mediaControls: false,
             hideScrollbar: true,
