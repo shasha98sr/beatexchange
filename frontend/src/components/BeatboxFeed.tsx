@@ -23,6 +23,7 @@ const BeatboxFeed: React.FC = () => {
     if (loading) return;
     try {
       setLoading(true);
+      setError(null);  // Clear any previous errors
       const response = await beatsService.getAll(pageNum, 6);
       
       setBeats(prev => {

@@ -84,24 +84,40 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
         setErrorWithDelay(null);
         setIsDestroyed(false);
         
-        // Use the Firebase URL directly without appending token
         const audioUrlToUse = audioUrl;
 
         if (waveformRef.current && !wavesurfer.current) {
+          // Create canvas for gradient
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
+
+          // Set canvas height to match desired waveform height
+          canvas.height = 100;
+
+          // Create gradient for non-progress region
+          const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height * 1.7);
+          gradient.addColorStop(0, theme.palette.secondary.light);
+          gradient.addColorStop(0.95, theme.palette.secondary.light);
+          gradient.addColorStop(1, theme.palette.background.default);
+
+          // Create gradient for progress region
+          const progressGradient = ctx.createLinearGradient(0, 0, 0, canvas.height * 1.7);
+          progressGradient.addColorStop(0, theme.palette.primary.main);
+          progressGradient.addColorStop(0.95, theme.palette.secondary.main);
+          progressGradient.addColorStop(1, theme.palette.background.default);
+
           const ws = WaveSurfer.create({
             container: waveformRef.current,
-            waveColor: theme.palette.secondary.light,
-            progressColor: theme.palette.primary.main,
-            cursorColor: theme.palette.secondary.main,
-            cursorWidth: 1,
+            waveColor: gradient,
+            progressColor: progressGradient,
+            cursorColor: theme.palette.primary.main,
+            cursorWidth: 2,
             barWidth: 3,
-            barGap: 0.5,
+            barGap: 2,
             height: 100,
+            barRadius: 3,
             normalize: true,
-            mediaControls: false,
-            hideScrollbar: true,
-            barRadius: 0,
-            minPxPerSec: 1,
             interact: true,
             fillParent: true
           });
@@ -233,11 +249,12 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
       marker.style.position = 'absolute';
       marker.style.left = `${position}%`;
       marker.style.bottom = '0';
-      marker.style.width = '7px';
-      marker.style.height = '7px';
+      marker.style.width = '9px';
+      marker.style.height = '9px';
       marker.style.backgroundColor = '#1db954';
-      marker.style.opacity = '0.6';
-      marker.style.pointerEvents = 'none';
+      marker.style.opacity = '1';
+      marker.style.pointerEvents = 'auto';  // Enable pointer events for hover
+      marker.style.cursor = 'pointer';      // Show pointer cursor on hover
       marker.style.zIndex = '1';
 
       const commentElement = document.createElement('div');
@@ -266,7 +283,16 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
       
       marker.dataset.commentId = comment.id.toString();
       commentElement.dataset.commentId = comment.id.toString();
-      
+
+      // Add hover events
+      marker.addEventListener('mouseenter', () => {
+        commentElement.style.opacity = '1';
+      });
+
+      marker.addEventListener('mouseleave', () => {
+        commentElement.style.opacity = '0';
+      });
+
       if (position > 50) {
         commentMarkersRef.current?.appendChild(commentElement);
         commentMarkersRef.current?.appendChild(marker);
@@ -385,7 +411,37 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
         </IconButton>
         
         <Box sx={{ position: 'relative', width: '100%' }}>
-          <Box ref={waveformRef} sx={{ width: '100%' }} />
+          <Box 
+            ref={waveformRef} 
+            sx={{ 
+              width: '100%',
+              position: 'relative',
+              cursor: 'pointer',
+              '& wave': {
+                overflow: 'hidden'
+              },
+              '&:hover .hover-effect': {
+                opacity: 1
+              }
+            }} 
+          >
+            <Box
+              className="hover-effect"
+              sx={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                zIndex: 10,
+                pointerEvents: 'none',
+                height: '100%',
+                width: '100%',
+                mixBlendMode: 'overlay',
+                bgcolor: 'rgba(255, 255, 255, 0.5)',
+                opacity: 0,
+                transition: 'opacity 0.2s ease'
+              }}
+            />
+          </Box>
           <Box 
             ref={commentMarkersRef}
             sx={{
