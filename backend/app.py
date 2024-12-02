@@ -27,21 +27,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Configure CORS
-CORS(app, resources={
-    r"/api/*": {
-        "origins": ["http://localhost:3000", "https://spitbox.onrender.com"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True,
-        "expose_headers": ["Content-Type", "Authorization"]
-    },
-    r"/uploads/*": {
-        "origins": ["*"],
-        "methods": ["GET", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Range", "Accept-Ranges", "Content-Range"],
-        "expose_headers": ["Content-Type", "Accept-Ranges", "Content-Range", "Content-Length"]
-    }
-})
+CORS(app)
 
 # Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///beatexchange.db')
