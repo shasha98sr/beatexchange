@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import {
@@ -7,11 +7,12 @@ import {
   Box,
 } from '@mui/material';
 import BeatboxFeed from './components/BeatboxFeed';
-import RecordBeat from './components/RecordBeat';
+import RecordPage from './components/RecordPage';
 import LandingPage from './components/LandingPage';
+import Profile from './components/Profile';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import * as beatService from './services/api';
-import Navbar from './components/Navbar';
+import Sidebar from './components/Sidebar';
 import './App.css';
 
 function AppContent() {
@@ -119,26 +120,57 @@ function AppContent() {
   return (
     <ThemeProvider theme={themeObj}>
       <CssBaseline />
-      <Router>
-        <Navbar onToggleTheme={toggleTheme} />
-        <Container maxWidth="lg">
-          <Box sx={{ mt: 4, pb: 4 }}>
+      <Container maxWidth="lg">
+        <Box sx={{ 
+          display: 'flex',
+          minHeight: '100vh',
+          position: 'relative',
+        }}>
+          {/* Left Sidebar */}
+          {isAuthenticated && (
+            <Box
+              sx={{
+                width: 275,
+                position: 'sticky',
+                top: 0,
+                height: '100vh',
+                borderRight: 1,
+                borderColor: 'divider',
+                display: { xs: 'none', md: 'block' },
+              }}
+            >
+              <Sidebar onToggleTheme={toggleTheme} />
+            </Box>
+          )}
+
+          {/* Main Content */}
+          <Box sx={{ flex: 1, mt: 4, pb: 4 }}>
             <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/feed" element={<BeatboxFeed />} />
+              {!isAuthenticated ? (
+                <Route path="*" element={<LandingPage />} />
+              ) : (
+                <>
+                  <Route path="/" element={<BeatboxFeed />} />
+                  <Route path="/feed" element={<BeatboxFeed />} />
+                  <Route path="/record" element={<RecordPage />} />
+                  <Route path="/:username" element={<Profile />} />
+                </>
+              )}
             </Routes>
           </Box>
-        </Container>
-      </Router>
+        </Box>
+      </Container>
     </ThemeProvider>
   );
 };
 
 const App = () => {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <Router>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </Router>
   );
 };
 

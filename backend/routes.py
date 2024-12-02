@@ -5,6 +5,8 @@ from werkzeug.utils import secure_filename
 from app import app, db, User, Beat, Comment, Like
 from datetime import datetime
 import os
+from firestore import upload_file
+from sqlalchemy import distinct
 
 # Create uploads directory if it doesn't exist
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
@@ -15,6 +17,8 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def get_full_url(path):
     """Helper function to convert relative paths to full URLs"""
+    if path.startswith('https://'):  
+        return path
     if path.startswith('/uploads/'):
         return f"http://127.0.0.1:8000{path}"
     return path
@@ -31,16 +35,23 @@ def create_beat():
     if not audio_file.filename:
         return jsonify({"error": "No selected file"}), 400
     
-    # Save audio file
+    # Save audio file temporarily
     filename = secure_filename(f"{datetime.utcnow().timestamp()}_{audio_file.filename}")
-    audio_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    audio_file.save(audio_path)
+    temp_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    audio_file.save(temp_path)
     
-    relative_url = f"/uploads/{filename}"
+    # Upload to Firebase Storage
+    firebase_url = upload_file(temp_path, filename)
+    if not firebase_url:
+        return jsonify({"error": "Failed to upload file to storage"}), 500
+    
+    # Remove temporary file
+    os.remove(temp_path)
+    
     beat = Beat(
         title=request.form.get('title', 'Untitled Beat'),
         description=request.form.get('description', ''),
-        audio_url=relative_url,
+        audio_url=firebase_url,  
         user_id=get_jwt_identity()
     )
     db.session.add(beat)
@@ -52,14 +63,100 @@ def create_beat():
             "id": beat.id,
             "title": beat.title,
             "description": beat.description,
-            "audio_url": get_full_url(beat.audio_url)
+            "audio_url": beat.audio_url  
         }
     }), 201
 
 @app.route('/api/beats', methods=['GET'])
 @cross_origin()
 def get_beats():
-    beats = Beat.query.order_by(Beat.created_at.desc()).all()
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    
+    # Build the base query with proper join conditions
+    query = db.session.query(
+        Beat.id,
+        Beat.title,
+        Beat.description,
+        Beat.audio_url,
+        Beat.created_at,
+        User.username.label('author'),
+        User.profile_photo.label('author_photo'),
+        db.func.count(distinct(Like.id)).label('likes_count'),
+        db.func.count(distinct(Comment.id)).label('comments_count')
+    ).select_from(Beat)\
+    .join(User, Beat.user_id == User.id)\
+    .outerjoin(Like, Beat.id == Like.beat_id)\
+    .outerjoin(Comment, Beat.id == Comment.beat_id)\
+    .group_by(Beat.id, User.username, User.profile_photo)\
+    .order_by(Beat.created_at.desc())
+    
+    # Get paginated results
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    # Get beats with their comments
+    beats_with_details = []
+    for beat in pagination.items:
+        comments = Comment.query.filter_by(beat_id=beat.id)\
+            .order_by(Comment.timestamp)\
+            .limit(3)\
+            .all()
+            
+        beat_data = {
+            'id': beat.id,
+            'title': beat.title,
+            'description': beat.description,
+            'audio_url': get_full_url(beat.audio_url),
+            'author': beat.author,
+            'created_at': beat.created_at.isoformat(),
+            'likes_count': beat.likes_count,
+            'comments_count': beat.comments_count,
+            'author_photo': get_full_url(beat.author_photo) if beat.author_photo else None,
+            'comments': [{
+                'id': comment.id,
+                'content': comment.content,
+                'timestamp': comment.timestamp,
+                'username': User.query.get(comment.user_id).username,
+                'created_at': comment.created_at.isoformat()
+            } for comment in comments]
+        }
+        beats_with_details.append(beat_data)
+    
+    return jsonify({
+        'beats': beats_with_details,
+        'total': pagination.total,
+        'pages': pagination.pages,
+        'current_page': pagination.page
+    }), 200
+
+@app.route('/api/users/<string:username>/beats', methods=['GET'])
+@cross_origin()
+def get_user_beats(username):
+    # Remove @ symbol if present
+    clean_username = username[1:] if username.startswith('@') else username
+    
+    user = User.query.filter_by(username=clean_username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+        
+    beats = Beat.query.filter_by(user_id=user.id).order_by(Beat.created_at.desc()).all()
+    return jsonify([{
+        'id': beat.id,
+        'title': beat.title,
+        'description': beat.description,
+        'audio_url': get_full_url(beat.audio_url),
+        'author': beat.author.username if beat.author else 'Unknown User',
+        'created_at': beat.created_at.isoformat(),
+        'likes_count': len(beat.likes),
+        'author_photo': get_full_url(beat.author.profile_photo) if beat.author and beat.author.profile_photo else None
+    } for beat in beats]), 200
+
+@app.route('/api/users/me/beats', methods=['GET'])
+@jwt_required()
+@cross_origin()
+def get_my_beats():
+    current_user_id = get_jwt_identity()
+    beats = Beat.query.filter_by(user_id=current_user_id).order_by(Beat.created_at.desc()).all()
     return jsonify([{
         'id': beat.id,
         'title': beat.title,

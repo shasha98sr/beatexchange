@@ -132,12 +132,14 @@ const LandingPage: React.FC = () => {
             Go to Feed
           </Button>
         ) : (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, gap: 2, alignItems: 'center' }}>
+          <>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, gap: 2, alignItems: 'center', flexDirection: 'column' }}>
             <GoogleLogin
               text='continue_with' 
               onSuccess={handleGoogleSuccess}
               onError={handleGoogleError}
             />
+ 
             <Button
               variant="outlined"
               startIcon={<img src="https://github.com/favicon.ico" alt="GitHub" style={{ width: 16, height: 16 }} />}
@@ -156,6 +158,13 @@ const LandingPage: React.FC = () => {
               Star on GitHub
             </Button>
           </Box>
+            
+           {error && (
+              <Typography color="error" sx={{ mt: 2 }}>
+                {error}
+              </Typography>
+            )}
+            </>
         )}
       </Box>
     </Box>

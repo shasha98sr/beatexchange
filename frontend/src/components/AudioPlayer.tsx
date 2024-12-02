@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import { Box, IconButton, Typography, TextField, Button, Stack, Alert, useTheme, Avatar } from '@mui/material';
+import { Box, IconButton, Typography, TextField, Button, Stack, Alert, useTheme, Avatar, CircularProgress } from '@mui/material';
 import { PlayArrow, Pause, Comment, Send } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { beats } from '../services/api';
@@ -11,6 +11,8 @@ interface AudioPlayerProps {
   title: string;
   username: string;
   profilePicture?: string | null;
+  comments: Comment[];
+  onCommentAdd?: (beatId: number, comment: any) => void;
 }
 
 interface Comment {
@@ -21,7 +23,15 @@ interface Comment {
   created_at: string;
 }
 
-const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, username, profilePicture }) => {
+const AudioPlayer: React.FC<AudioPlayerProps> = ({
+  audioUrl,
+  beatId,
+  title,
+  username,
+  profilePicture,
+  comments: initialComments,
+  onCommentAdd
+}) => {
   const { token } = useAuth();
   const theme = useTheme();
   const waveformRef = useRef<HTMLDivElement>(null);
@@ -31,7 +41,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [comments, setComments] = useState<Comment[]>(initialComments);
   const [newComment, setNewComment] = useState('');
   const [isDestroyed, setIsDestroyed] = useState(false);
   const [hasPlayed, setHasPlayed] = useState(false);
@@ -74,24 +84,40 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
         setErrorWithDelay(null);
         setIsDestroyed(false);
         
-        // Append token to URL
-        const authenticatedUrl = `${audioUrl}${audioUrl.includes('?') ? '&' : '?'}token=${token}`;
+        const audioUrlToUse = audioUrl;
 
         if (waveformRef.current && !wavesurfer.current) {
+          // Create canvas for gradient
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
+
+          // Set canvas height to match desired waveform height
+          canvas.height = 100;
+
+          // Create gradient for non-progress region
+          const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height * 1.7);
+          gradient.addColorStop(0, theme.palette.secondary.light);
+          gradient.addColorStop(0.95, theme.palette.secondary.light);
+          gradient.addColorStop(1, theme.palette.background.default);
+
+          // Create gradient for progress region
+          const progressGradient = ctx.createLinearGradient(0, 0, 0, canvas.height * 1.7);
+          progressGradient.addColorStop(0, theme.palette.primary.main);
+          progressGradient.addColorStop(0.95, theme.palette.secondary.main);
+          progressGradient.addColorStop(1, theme.palette.background.default);
+
           const ws = WaveSurfer.create({
             container: waveformRef.current,
-            waveColor: theme.palette.secondary.light,
-            progressColor: theme.palette.primary.main,
-            cursorColor: theme.palette.secondary.main,
-            cursorWidth: 1,
+            waveColor: gradient,
+            progressColor: progressGradient,
+            cursorColor: theme.palette.primary.main,
+            cursorWidth: 2,
             barWidth: 3,
-            barGap: 0.5,
-            height: 50,
+            barGap: 2,
+            height: 100,
+            barRadius: 3,
             normalize: true,
-            mediaControls: false,
-            hideScrollbar: true,
-            barRadius: 0,
-            minPxPerSec: 1,
             interact: true,
             fillParent: true
           });
@@ -148,7 +174,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
           });
 
           try {
-            await ws.load(authenticatedUrl);
+            await ws.load(audioUrlToUse);
           } catch (error) {
             console.error('Error loading audio:', error);
             if (!isDestroyed) {
@@ -180,6 +206,10 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
       }
     };
   }, [audioUrl, comments, isDestroyed, token, setErrorWithDelay]);
+
+  useEffect(() => {
+    setComments(initialComments);
+  }, [initialComments]);
 
   const handlePlayPause = () => {
     if (!wavesurfer.current) return;
@@ -219,11 +249,13 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
       marker.style.position = 'absolute';
       marker.style.left = `${position}%`;
       marker.style.bottom = '0';
-      marker.style.width = '7px';
-      marker.style.height = '7px';
+      marker.style.width = '11px';
+      marker.style.height = '11px';
+      marker.style.borderRadius = '30px';
       marker.style.backgroundColor = '#1db954';
-      marker.style.opacity = '0.6';
-      marker.style.pointerEvents = 'none';
+      marker.style.opacity = '1';
+      marker.style.pointerEvents = 'auto';  // Enable pointer events for hover
+      marker.style.cursor = 'pointer';      // Show pointer cursor on hover
       marker.style.zIndex = '1';
 
       const commentElement = document.createElement('div');
@@ -252,7 +284,16 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
       
       marker.dataset.commentId = comment.id.toString();
       commentElement.dataset.commentId = comment.id.toString();
-      
+
+      // Add hover events
+      marker.addEventListener('mouseenter', () => {
+        commentElement.style.opacity = '1';
+      });
+
+      marker.addEventListener('mouseleave', () => {
+        commentElement.style.opacity = '0';
+      });
+
       if (position > 50) {
         commentMarkersRef.current?.appendChild(commentElement);
         commentMarkersRef.current?.appendChild(marker);
@@ -268,30 +309,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
     updateCommentMarkers();
   }, [comments, updateCommentMarkers]);
 
-  const fetchComments = useCallback(async () => {
-    try {
-      if (!token) {
-        console.error('No auth token found');
-        return;
-      }
-
-      const data = await beats.getComments(beatId);
-      setComments(data.map((comment: any) => ({
-        id: comment.id,
-        text: comment.content,
-        timestamp: comment.timestamp,
-        username: comment.username,
-        created_at: comment.created_at
-      })));
-    } catch (error) {
-      console.error('Error fetching comments:', error);
-    }
-  }, [beatId, token]);
-
-  useEffect(() => {
-    fetchComments();
-  }, [fetchComments]);
-
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
 
@@ -301,14 +318,18 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
         return;
       }
 
-      const newCommentData = await beats.addComment(beatId, newComment, currentTime);
-      setComments(prevComments => [...prevComments, {
-        id: newCommentData.id,
-        text: newCommentData.content,
-        timestamp: newCommentData.timestamp,
-        username: newCommentData.username,
-        created_at: newCommentData.created_at
-      }]);
+      const response = await beats.addComment(beatId, newComment, currentTime);
+
+      const newCommentObj = {
+        id: response.id,
+        text: response.content,
+        timestamp: response.timestamp,
+        username: response.username,
+        created_at: response.created_at
+      };
+
+      setComments(prev => [...prev, newCommentObj]);
+      onCommentAdd?.(beatId, newCommentObj);
       setNewComment('');
     } catch (error) {
       console.error('Error adding comment:', error);
@@ -331,24 +352,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
         <Alert severity="error" sx={{ marginBottom: 2 }}>
           {error}
         </Alert>
-      )}
-      {isLoading && (
-        <Box sx={{ 
-          position: 'absolute', 
-          top: 0, 
-          left: 0, 
-          right: 0, 
-          bottom: 0, 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          bgcolor: 'rgba(255, 255, 255, 0.1)',
-          zIndex: 1
-        }}>
-          <Typography variant="body2" color="text.secondary">
-            Loading audio...
-          </Typography>
-        </Box>
       )}
       <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%', justifyContent: 'space-between' }}>
         <Stack direction="row" spacing={2} alignItems="center">
@@ -380,18 +383,66 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, beatId, title, user
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', marginY: 2 }}>
         <IconButton 
           onClick={handlePlayPause} 
+          disabled={isLoading}
           sx={{
             color: theme.palette.primary.main,
             borderRadius: '50%',
             border: '1px solid',
             borderColor: theme.palette.primary.main,
+            position: 'relative',
+            '&.Mui-disabled': {
+              borderColor: theme.palette.primary.main,
+              color: theme.palette.primary.main,
+            }
           }}
         >
-          {isPlaying ? <Pause /> : <PlayArrow />}
+          {isLoading ? (
+            <CircularProgress
+              size={24}
+              sx={{
+                color: theme.palette.primary.main,
+                position: 'absolute',
+              }}
+            />
+          ) : isPlaying ? (
+            <Pause />
+          ) : (
+            <PlayArrow />
+          )}
         </IconButton>
         
         <Box sx={{ position: 'relative', width: '100%' }}>
-          <Box ref={waveformRef} sx={{ width: '100%' }} />
+          <Box 
+            ref={waveformRef} 
+            sx={{ 
+              width: '100%',
+              position: 'relative',
+              cursor: 'pointer',
+              '& wave': {
+                overflow: 'hidden'
+              },
+              '&:hover .hover-effect': {
+                opacity: 1
+              }
+            }} 
+          >
+            <Box
+              className="hover-effect"
+              sx={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                zIndex: 10,
+                pointerEvents: 'none',
+                height: '100%',
+                width: '100%',
+                mixBlendMode: 'overlay',
+                bgcolor: 'rgba(255, 255, 255, 0.5)',
+                opacity: 0,
+                transition: 'opacity 0.2s ease'
+              }}
+            />
+          </Box>
           <Box 
             ref={commentMarkersRef}
             sx={{
