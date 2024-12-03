@@ -27,7 +27,6 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Configure CORS
-CORS(app)
 
 # Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///beatexchange.db')
@@ -37,9 +36,9 @@ app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1)
 app.config['ADMIN_SECRET'] = os.getenv('ADMIN_SECRET', 'your-admin-secret')  # Add this to your Render env variables
 
 # Enable SQLAlchemy logging
-import logging
-logging.basicConfig()
-logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+# import logging
+# logging.basicConfig()
+# logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 # Initialize extensions
 db = SQLAlchemy(app)
@@ -50,44 +49,13 @@ GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 if not GOOGLE_CLIENT_ID:
     raise ValueError("GOOGLE_CLIENT_ID environment variable is not set")
 
-def init_db():
-    print("Initializing database...")
-    try:
-        # Create database directory if it doesn't exist
-        db_path = os.path.dirname(app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', ''))
-        if not os.path.exists(db_path) and db_path:
-            print(f"Creating database directory: {db_path}")
-            os.makedirs(db_path)
-
-        # Create all tables
-        with app.app_context():
-            print("Creating database tables...")
-            db.create_all()
-            print("Database tables created successfully")
-    except Exception as e:
-        print(f"Error initializing database: {str(e)}")
-        raise
-
-def reset_db():
-    print("Resetting database...")
-    try:
-        with app.app_context():
-            print("Dropping all tables...")
-            db.drop_all()
-            print("Creating new tables...")
-            db.create_all()
-            print("Database reset successfully")
-    except Exception as e:
-        print(f"Error resetting database: {str(e)}")
-        raise
-
 # Models
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
-    profile_photo = db.Column(db.String(500), nullable=True, default=None)  # Made nullable
+    profile_photo = db.Column(db.String(500), nullable=True, default=None)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     beats = db.relationship('Beat', backref='author', lazy=True)
 
@@ -104,7 +72,7 @@ class Beat(db.Model):
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
-    timestamp = db.Column(db.Float, nullable=False)  # Timestamp in seconds
+    timestamp = db.Column(db.Float, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     beat_id = db.Column(db.Integer, db.ForeignKey('beat.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -114,6 +82,25 @@ class Like(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     beat_id = db.Column(db.Integer, db.ForeignKey('beat.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+def init_db():
+    with app.app_context():
+        db.create_all()
+
+def reset_db():
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+
+# Import routes after models to avoid circular imports
+from routes import *
+
+# Initialize database on startup
+with app.app_context():
+    try:
+        db.create_all()
+    except Exception as e:
+        print(f"Error creating database tables: {e}")
 
 # Basic route for testing
 @app.route('/')
@@ -320,15 +307,6 @@ def admin_reset_db():
         return jsonify({"message": "Database reset successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-# Initialize database on startup
-with app.app_context():
-    try:
-        # Try to create tables if they don't exist
-        db.create_all()
-        print("Database initialized successfully")
-    except Exception as e:
-        print(f"Error during database initialization: {str(e)}")
 
 if __name__ == '__main__':
     app.run(debug=True)
